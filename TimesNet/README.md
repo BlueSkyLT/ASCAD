@@ -25,11 +25,15 @@ from TimesNet import RouteATimeLLMClassifier
 model = RouteATimeLLMClassifier(
     trace_len=15000,
     num_classes=256,
+    patch_size=256,
+    stride=128,
     model_type="gpt2",  # use "llama3" for Meta-Llama-3-8B
 )
 ```
 
 Install `transformers` only when using this route.  Llama-3 access requires
-the Hugging Face model permission and authentication.  The backbone stays in
-evaluation mode and frozen; unlike a `no_grad` block, the forward pass still
-propagates gradients to the trainable patch projector.
+the Hugging Face model permission and authentication.  For long ASCADv2
+traces, choose patch settings that keep prompt plus patch count below the
+backbone context length.  The backbone stays in evaluation mode and frozen;
+unlike a `no_grad` block, the forward pass still propagates gradients to the
+trainable patch projector.

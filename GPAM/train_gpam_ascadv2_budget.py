@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
-"""Budget-controlled GPAM ASCADv2 reproduction targeting Table 11 GE < 1 @ ~80 traces.
+"""Budget-controlled GPAM ASCADv2 head trainer. GE is NOT computable here.
 
-Uses a scaled subset (100k train / 10k val / 10k attack) to stay under $5 budget.
-Implements multi-byte masked Sbox heads and evaluates GE during training.
+The original premise of this script -- "reproduce Table 11 GE < 1 in ~80 traces"
+-- was wrong twice over. Table 11 reports per-head Accuracy / MeanRank / MaxRank
+on the 80,000-trace holdout, not guessing entropy; and the GE figure is section
+7.1 prose that depends on a fixed-key simulation this file never performed. Its
+`compute_ge` also scored unmasked S-box values against masked-S-box heads and
+ranked a per-trace-random-key dataset against trace 0's key.
+
+`main()` now refuses to run. See GE_BROKEN for the full diagnosis and
+GPAM/C-gpam-eval.py for the correct evaluation.
 """
 
 from __future__ import annotations
@@ -92,33 +99,35 @@ def build_model(train_x: np.ndarray, target_bytes: list[int], patch_size: int = 
     return model
 
 
-def compute_ge(model, attack_traces, attack_labels, attack_meta, target_bytes, max_traces=1000):
-    """Compute guessing entropy for each target byte using classical key-rank approach."""
-    n_attack = min(len(attack_traces), max_traces)
-    ge_results = {}
+GE_BROKEN = """compute_ge() cannot produce a valid ASCADv2 guessing entropy.
 
-    for byte_idx in target_bytes:
-        preds = model.predict(attack_traces[:n_attack], batch_size=32, verbose=0)
-        if isinstance(preds, dict):
-            byte_preds = preds[f"sbox_byte_{byte_idx}"]
-        else:
-            byte_preds = preds
+Four independent faults, any one of which invalidates the number:
+  1. Scores hypotheses with AES_SBOX[plaintext[byte] ^ key_hyp] -- the UNMASKED
+     S-box at the UNPERMUTED index -- while the head predicts the masked value
+     alpha * SBOX[plaintext[perm] ^ key[perm]] ^ beta. Hypothesis and label are
+     different quantities, so no key evidence accumulates.
+  2. Reads the true key from attack_meta[0] and applies it to every trace.
+     ASCADv2 draws a fresh random key per trace (verified: 2000 distinct keys in
+     2000 sampled traces, in both Profiling and Attack), so there is no single
+     true key to rank against.
+  3. Accumulates log-probabilities across traces without the paper's section 7.1
+     fixed-key simulation (replace plaintext by plaintext ^ key so the true key
+     byte is hypothesis 0). Accumulation only means something after that rewrite.
+  4. Ranks via np.argsort on a score vector that can be constant. A uniform head
+     then returns rank 0 -- an entirely uninformative model reports a key
+     recovery. Ranking must count ties AGAINST the target.
 
-        # Classical key recovery: for each key hypothesis, accumulate log-probs
-        key_scores = np.zeros(256, dtype=np.float64)
-        for trace_idx in range(n_attack):
-            plaintext = attack_meta[trace_idx]["plaintext"]
-            for key_hyp in range(256):
-                z_hyp = AES_SBOX[plaintext[byte_idx] ^ key_hyp]
-                key_scores[key_hyp] += np.log(byte_preds[trace_idx, z_hyp] + 1e-40)
+Correct implementation: GPAM/C-gpam-eval.py (section 7.1 simulation, mask
+dissection, tie handling, signal-free controls). The dissection formulas are also
+in ASCAD_test_models.py:687-743. Table 11 of the paper is per-head
+Accuracy/MeanRank/MaxRank on the holdout, not GE; the ~80-trace figure is prose in
+section 7.1 and is reached via the simulation above.
+"""
 
-        # Rank by score
-        ranked_keys = np.argsort(-key_scores)
-        true_key = attack_meta[0]["key"][byte_idx]
-        ge = int(np.where(ranked_keys == true_key)[0][0])
-        ge_results[byte_idx] = ge
 
-    return ge_results
+def compute_ge(*args, **kwargs):
+    """Removed: no argument makes this formulation valid for ASCADv2. See GE_BROKEN."""
+    raise RuntimeError(GE_BROKEN)
 
 
 class GECallback(keras.callbacks.Callback):
@@ -169,6 +178,10 @@ def parse_args():
 
 
 def main():
+    # Guarded before any data load so a run cannot spend hours producing an
+    # invalid GE number. The loader/trainer below stays for head-only work.
+    raise SystemExit(GE_BROKEN + "\nThis script can train heads; see GPAM/C-gpam-eval.py "
+                                 "for heads plus a valid section 7.1 ranking.")
     args = parse_args()
     dataset_path = Path(args.dataset_path)
     if not dataset_path.exists():

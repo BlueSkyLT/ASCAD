@@ -1,7 +1,7 @@
 {
   "config": {
-    "model": "docs/2026-09-23/out/C-gpam-eval.keras",
-    "dataset_path": "STM32_AES_v2/ASCAD_data/ASCAD_databases/ascadv2-extracted.h5",
+    "model": "/home/lantian/ASCAD/GPAM/artifacts/C-gpam-eval.keras",
+    "dataset_path": "/home/lantian/ASCAD/STM32_AES_v2/ASCAD_data/ASCAD_databases/ascadv2-extracted.h5",
     "n_attack": 2000,
     "target_byte": 0,
     "ts": [
@@ -11,7 +11,7 @@
       1000,
       2000
     ],
-    "out_json": "docs/2026-09-23/out/C-gpam-ablation.json"
+    "out_json": "/home/lantian/ASCAD/GPAM/artifacts/C-gpam-ablation.json"
   },
   "rm_match_pct": 92.35,
   "perm_match_pct": 9.55,
@@ -45,19 +45,19 @@
       "2000": 20
     },
     "E_c_head_chance": {
-      "80": 0,
-      "200": 0,
-      "500": 0,
-      "1000": 0,
-      "2000": 0
+      "80": 255,
+      "200": 255,
+      "500": 255,
+      "1000": 255,
+      "2000": 255
     },
     "F_rout_head_chance": {
-      "80": 0,
-      "200": 0,
-      "500": 0,
-      "1000": 0,
-      "2000": 0
+      "80": 255,
+      "200": 207,
+      "500": 238,
+      "1000": 255,
+      "2000": 255
     }
   },
-  "wall_seconds": 4.6
+  "wall_seconds": 4.4
 }

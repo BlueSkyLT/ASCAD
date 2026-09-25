@@ -132,8 +132,13 @@ all**, only `key`, `plaintext`, `masks`, `ciphertext`.
 We have not reproduced Table 11. Our comparison run differs from the paper in
 every load-bearing dimension: ~4 heads vs ~35, `output_relations=[]`, tens of
 thousands of training traces vs 640,000, 8 epochs vs 150×1,000 steps, patch 150
-on the 15,000-point extracted file vs patch 400 on 1,000,000 raw points. The next
-cited run waits on the full raw download; shards 1–7 are still `.part`.
+on the 15,000-point extracted file vs patch 400 on 1,000,000 raw points.
+
+*Updated 2026-09-25:* the raw download **has since finished** — all eight shards
+are present at 93.14 GB and open with `traces (100000, 1000000)` int8 plus
+`metadata`. A paper-scale raw run is no longer blocked on data. What was written
+above, including "the next cited run waits on the full raw download", reflected
+the state at 01:50 on 2026-09-24.
 
 ## The caveat that applies to our own GPAM numbers
 
@@ -171,17 +176,21 @@ applies:
   their 95.07 % is a real gap we have not explained, and we do not know how much
   of it the crop is responsible for.
 
-A raw 1,000,000-point run is still the only way to close the config question, and
-that is the gate T-019 is already blocked on: shards 1–7 were still downloading
-at 01:14 and only shard 8 is complete. Multi-day, not a morning.
+A raw 1,000,000-point run is the only way to close the config question. When this
+was written the gate was T-019's Phase 0 — shards 1–7 still downloading, only
+shard 8 complete, "multi-day, not a morning." **That gate has since cleared:** as
+of 2026-09-25 all eight shards are on disk at 93.14 GB and open as
+`traces (100000, 1000000)` int8. The raw comparison is now schedulable rather
+than blocked.
 
 ## What our own GPAM run measured
 
 GPAM itself (`scaaml.get_gpam_model`), 4 heads, extracted ASCADv2, byte 0, seed 0,
 40,000 profiling traces, 8 epochs, patch 150 (100 steps), batch 64, Adafactor
 lr 1e-3. Wall 1,098 s. Holdout = traces 400,000–401,999 (never trained on);
-attack = the public 2,000. Script `out/C-gpam-eval.py`, numbers
-`out/C-gpam-eval.json`.
+attack = the public 2,000. Script `GPAM/C-gpam-eval.py`, numbers
+`GPAM/artifacts/C-gpam-eval.json` (both moved out of `docs/2026-09-23/out/` on
+2026-09-25; that directory is no longer a source of truth for brief C).
 
 ### Non-GE: our four heads against Table 11's four rows
 
@@ -236,11 +245,14 @@ convergence.
 
 Two nulls that make that concrete, both worth repeating at the meeting:
 
-- **Tie artifact.** With `c` replaced by a uniform distribution the score vector is
-  *exactly* constant (all 256 hypotheses at −2772.5887) and a strict `>` rank
-  returns **rank 0** — an entirely uninformative model appears to recover the key.
-  Any GE implementation without tie handling can report a break it does not have.
-  This is the same class of bug as `compute_ge`.
+- **Tie artifact, now fixed.** Before the guard, replacing `c` with a uniform
+  distribution made the score vector *exactly* constant (all 256 hypotheses at
+  −2772.5887) and a strict `>` rank returned **rank 0** — an entirely
+  uninformative model appeared to recover the key. Ranking now counts ties
+  *against* the target, so that same control correctly returns **rank 255**. The
+  fix is provably neutral on real results: regimes A–D are unchanged to the digit
+  because they have no exact ties. Both facts belong in the meeting — the second
+  one is what makes the first credible.
 - **Signal-free band.** Randomly permuting which trace each prediction belongs to
   — destroying the trace↔value link while keeping the head's marginals — gave
   ranks at 2,000 traces of `[10, 29, 42, 85, 91, 166, 198, 203, 210, 238, 239, 244]`,
@@ -325,9 +337,9 @@ called a break.
    the same file. A2's chance result was about that model at that budget.
 4. **"We got a low GE, therefore we recovered the key."** Our own shuffled
    control — predictions assigned to the wrong traces — produced rank 10 at 2,000
-   traces, beating our real 20. And a uniform head produces rank 0 outright
-   through tie handling. On this dataset a low GE number is not evidence until it
-   clears a signal-free control and AOD-GE.
+   traces, beating our real 20. A uniform head used to report rank 0 outright
+   through tie handling before the guard landed. On this dataset a low GE number
+   is not evidence until it clears a signal-free control and AOD-GE.
 5. **"This is a strict break."** Every head here predicts mask labels. That is
    worst-case First Threat, not the no-mask-label bar in
    `docs/survey-ascadv2-dl-2022-2026.md`.
@@ -336,8 +348,9 @@ called a break.
 
 | Action | Why | Cost |
 |---|---|---|
-| Fix the tie handling in every GE path, ours and `compute_ge`'s | A uniform head currently reports rank 0 | ~lines |
+| ~~Fix the tie handling in every GE path~~ **done 2026-09-25** | Ranking now counts ties against the target; uniform head correctly reports 255 instead of 0 | — |
+| ~~Guard `compute_ge`~~ **done 2026-09-25** | `train_gpam_ascadv2_budget.py` refuses to run and names all four faults | — |
 | Treat `p` (shuffle index) as the blocking head, not `rm` | 8.6 % vs their 95.07 %, and it routes every key byte | needs a run |
 | Add AOD-GE before any v2 GE is called a break | Byte 4's 2.75 vs prior's 3 is currently unresolvable | not implemented |
-| Re-run `rm` at the paper's budget only if raw shards land | Answers the config question honestly | days, blocked on shards 1–7 |
+| Re-run `rm`/`c`/`p` at the paper's budget on raw 1M-point traces | Answers the config question honestly | **unblocked** — all 8 shards landed 2026-09-25; ask before an overnight GPU run |
 

@@ -1,0 +1,115 @@
+{
+  "config": {
+    "dataset_path": "STM32_AES_v2/ASCAD_data/ASCAD_databases/ascadv2-extracted.h5",
+    "n_train": 512,
+    "n_val": 256,
+    "n_attack": 128,
+    "target_byte": 0,
+    "patch_size": 150,
+    "epochs": 1,
+    "batch_size": 32,
+    "seed": 0,
+    "ge_traces": [
+      1,
+      10,
+      50,
+      128
+    ],
+    "out_json": "docs/2026-09-23/out/C-dryrun.json"
+  },
+  "wall_seconds": 8.3,
+  "epochs_run": 1,
+  "n_holdout": 2000,
+  "paper_table11": {
+    "rm": [
+      100.0,
+      0,
+      0
+    ],
+    "rout": [
+      18.25,
+      4.78,
+      65
+    ],
+    "c_avg": [
+      1.18,
+      80.65,
+      255
+    ],
+    "p_avg": [
+      95.07,
+      0.055,
+      4.44
+    ]
+  },
+  "table11_holdout": {
+    "rm": {
+      "acc_pct": 0.75,
+      "mean_rank": 128.1215,
+      "max_rank": 255,
+      "top5_acc_pct": 2.3,
+      "chance_acc_pct": 0.3906
+    },
+    "rout": {
+      "acc_pct": 0.35,
+      "mean_rank": 129.2575,
+      "max_rank": 255,
+      "top5_acc_pct": 1.9,
+      "chance_acc_pct": 0.3906
+    },
+    "c": {
+      "acc_pct": 0.35,
+      "mean_rank": 125.287,
+      "max_rank": 255,
+      "top5_acc_pct": 1.95,
+      "chance_acc_pct": 0.3906
+    },
+    "p": {
+      "acc_pct": 6.7,
+      "mean_rank": 7.4125,
+      "max_rank": 15,
+      "top5_acc_pct": 32.3,
+      "chance_acc_pct": 6.25
+    }
+  },
+  "table11_attack": {
+    "rm": {
+      "acc_pct": 0.0,
+      "mean_rank": 129.8672,
+      "max_rank": 254,
+      "top5_acc_pct": 0.7812,
+      "chance_acc_pct": 0.3906
+    },
+    "rout": {
+      "acc_pct": 0.7812,
+      "mean_rank": 128.0312,
+      "max_rank": 252,
+      "top5_acc_pct": 0.7812,
+      "chance_acc_pct": 0.3906
+    },
+    "c": {
+      "acc_pct": 0.0,
+      "mean_rank": 133.5625,
+      "max_rank": 255,
+      "top5_acc_pct": 1.5625,
+      "chance_acc_pct": 0.3906
+    },
+    "p": {
+      "acc_pct": 3.125,
+      "mean_rank": 7.6875,
+      "max_rank": 15,
+      "top5_acc_pct": 26.5625,
+      "chance_acc_pct": 6.25
+    }
+  },
+  "perm_head_agrees_with_recompute_pct": 3.125,
+  "rm_argmax_equals_true_pct": 0.0,
+  "ge_fixed_key_sim": {
+    "1": 0,
+    "10": 91,
+    "50": 125,
+    "128": 31
+  },
+  "ge_prior_only": 38,
+  "wall_seconds_total": 8.8
+}

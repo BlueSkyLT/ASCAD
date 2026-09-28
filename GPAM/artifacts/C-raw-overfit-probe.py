@@ -28,8 +28,16 @@ sys.path.insert(0, "GPAM")
 from raw_dataset import RawMultiShardLoader  # noqa: E402
 from scaaml.models import get_gpam_model  # noqa: E402
 
-HEADS = ["rm", "rout", "c_0", "p_0"]
-NCLASSES = {"rm": 256, "rout": 256, "c_0": 256, "p_0": 16}
+HEADS_4 = ["rm", "rout", "c_0", "p_0"]
+
+
+def heads_for(all_bytes):
+    if not all_bytes:
+        return list(HEADS_4)
+    hs = ["rm", "rout"]
+    for b in range(16):
+        hs += [f"c_{b}", f"p_{b}"]
+    return hs
 
 
 def main():
@@ -43,10 +51,19 @@ def main():
     ap.add_argument("--warmup-frac", type=float, default=0.0,
                     help="fraction of steps to ramp LR up to --lr (paper 5.3.1 schedule)")
     ap.add_argument("--log-every", type=int, default=200)
+    ap.add_argument("--all-bytes", action="store_true",
+                    help="34 heads (rm, rout, c[0..15], p[0..15]) as in the paper, "
+                         "instead of the 4-head byte-0 pilot")
+    ap.add_argument("--shuffle-labels", action="store_true",
+                    help="randomise every label; the rote-memorisation control")
     a = ap.parse_args()
 
+    HEADS = heads_for(a.all_bytes)
+    NCLASSES = {h: (16 if h.startswith("p_") else 256) for h in HEADS}
+    tbytes = list(range(16)) if a.all_bytes else [0]
+
     t0 = time.time()
-    loader = RawMultiShardLoader(split="train", target_bytes=[0],
+    loader = RawMultiShardLoader(split="train", target_bytes=tbytes,
                                  chunk_size=a.n_traces, batch_size=a.batch_size,
                                  shuffle=False)
     X, Y = [], {h: [] for h in HEADS}
@@ -58,6 +75,14 @@ def main():
             break
     X = np.concatenate(X)[: a.n_traces].astype(np.float32)
     Y = {h: np.concatenate(Y[h])[: a.n_traces] for h in HEADS}
+    if a.shuffle_labels:
+        # Destroys every trace->label relation while keeping each head's marginal
+        # identical. Anything memorised here is rote fitting, not leakage -- this
+        # is the control that makes the other numbers interpretable.
+        rl = np.random.default_rng(1234)
+        Y = {k: rl.permutation(v) for k, v in Y.items()}
+        print("LABELS SHUFFLED: no trace carries its own label; accuracy above "
+              "chance here would be pure memorisation of noise", flush=True)
     print(f"[{time.time()-t0:5.1f}s] memorization set: X{X.shape} "
           f"range=[{X.min():.0f},{X.max():.0f}] mean={X.mean():.2f} std={X.std():.2f}", flush=True)
 
@@ -115,6 +140,28 @@ def main():
     print(f"MEMORISE: final rm_acc {h['rm_acc'][-1]*100:.1f}% and final total loss "
           f"{h['loss'][-1]:.4f} on only {a.n_traces} traces -- a working pipeline "
           f"should approach 100%/0 here")
+
+    if a.all_bytes:
+        def fin(key):
+            return h[key][-1]
+        c_acc = np.mean([fin(f"c_{b}_acc") for b in range(16)])
+        p_acc = np.mean([fin(f"p_{b}_acc") for b in range(16)])
+        c_loss = np.mean([fin(f"c_{b}_loss") for b in range(16)])
+        p_loss = np.mean([fin(f"p_{b}_loss") for b in range(16)])
+        print("\n=== 34-head aggregate vs paper Table 11 (held-out values there; "
+              "here train=eval memorisation, so NOT comparable as an accuracy) ===")
+        print(f"{'kind':6s} {'ours acc':>9s} {'ours mean CE':>13s} {'chance acc':>11s} "
+              f"{'paper acc':>10s} {'paper meanrank':>15s}")
+        print(f"{'rm':6s} {fin('rm_acc')*100:>8.2f}% {fin('rm_loss'):>13.4f} {100/256:>10.3f}% "
+              f"{'100.00':>10s} {'0':>15s}")
+        print(f"{'rout':6s} {fin('rout_acc')*100:>8.2f}% {fin('rout_loss'):>13.4f} "
+              f"{100/256:>10.3f}% {'18.25':>10s} {'4.78':>15s}")
+        print(f"{'c[i]':6s} {c_acc*100:>8.2f}% {c_loss:>13.4f} {100/256:>10.3f}% "
+              f"{'1.18':>10s} {'80.65':>15s}")
+        print(f"{'p[i]':6s} {p_acc*100:>8.2f}% {p_loss:>13.4f} {100/16:>10.3f}% "
+              f"{'95.07':>10s} {'0.055':>15s}")
+        print(f"per-p-head acc: " + " ".join(f"{fin(f'p_{b}_acc')*100:.1f}" for b in range(16)))
+        print(f"per-c-head acc: " + " ".join(f"{fin(f'c_{b}_acc')*100:.1f}" for b in range(16)))
 
 
 if __name__ == "__main__":

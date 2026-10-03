@@ -78,9 +78,26 @@ inside ±2 pp on every quantity.
   random key per trace. No GE number is produced by this evaluation.
 - **Not a strict break.** α, β and π are mask parameters that the First-Threat threat model makes
   available as training labels; predicting them is a worst-case result.
-- No `c`-based statement of the "the S-box is invisible" type: per-sample SNR for `c` peaks at
-  0.0721 over all 1,000,000 samples with **zero** samples above 0.1, against 1.9960 for α with
-  14,576 — but low SNR bounds what a linear reader can do, it is not an unlearnability proof.
+- No `c`-based statement of the "the S-box is invisible" type. And a correction to how I quoted the
+  SNR profile earlier: **per-sample SNR values are not comparable across targets with different
+  class counts.** Under the null the estimator is χ²_{K−1}/N, so with N = 16,384 traces its own
+  noise floor is (K−1)/N = **0.0156 for the 256-class heads but only 0.00092 for π** (16 classes).
+  Subtracting each target's own floor and counting samples significant at p < 1e-6:
+
+  | Target | K | floor | peak SNR | excess peak | class-mean sep | samples sig. at 1e-6 |
+  |---|---|---|---|---|---|---|
+  | `rm` | 256 | 0.0156 | 1.9960 | 1.9805 | 1.41 σ | 41,073 |
+  | `rout` | 256 | 0.0156 | 1.4195 | 1.4040 | 1.18 σ | 1,410 |
+  | `p[i]` | 16 | 0.00092 | 0.2085 | 0.2075 | 0.46 σ | **4,236** |
+  | `c[i]` | 256 | 0.0156 | 0.0721 | 0.0566 | 0.24 σ | **7** |
+
+  Normalised this way, the SNR ordering **agrees** with the learned ordering
+  (`rm` 99.996 % > `p` 86.5 % > `rout` 10.5 % > `c` 0.68 %): π is the second-most-visible target, not
+  the least, and `c` — not π — is the near-invisible one. The earlier "27 samples above 0.1 for π
+  vs 0 for `c`" contrast was an artifact of the fixed 0.1 threshold, which sits 6.4× above `c`'s
+  floor but 109× above π's. Caveats: samples are correlated across time, so the significant-sample
+  counts over-state independent evidence (a ranking, not an information total); the profile was
+  computed per target in isolation, so it cannot see cross-head leverage.
 
 ## Campaign record (for reproduction)
 

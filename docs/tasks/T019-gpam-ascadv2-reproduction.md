@@ -2,14 +2,40 @@
 
 ## Status
 
-**2026-09-30 ~02:00 — IN FLIGHT, epoch 14/150: the 34-head raw campaign is generalising across
-shards.** Held-out `val_loss` went 144.3199 (ep12, *worse* than chance) → 140.4642 (ep13) →
-**133.4385** (ep14); gap vs the 144.1746 chance total: −0.1453 → +3.7104 → **+10.7361** in three
-epochs. Train-side per-head at epoch 14: `rm`(α) **82.30 %**, `rout`(β) 2.18 % (5.6× chance),
-`p_0`(π) 15.96 % (2.6× chance), `c_0`(masked S) 0.46 % — still flat. **π moving is new**; the
-crop run had `p` at 8.60 % held-out and `T019:45` called the shuffle head "the hard one, not
-merely undertrained." Not yet citable — mid-run, and the final held-out eval is the number to
-record. Log: `GPAM/artifacts/logs_raw/campaign34_1e-3.log`.
+**2026-10-04 — DONE (Table 11 delivered). 3 of the paper's 4 quantities reproduce on never-seen
+raw 1 M-point traces.** The campaign never printed its own holdout table: it ran 76 of the 150
+target epochs (2026-09-29 21:23 → 2026-10-01 ~21:57, 48.6 h) and was **killed externally — it did
+not crash**, there is no traceback and no reboot. Every dated entry below this block is mid-run
+history; the citable numbers are the holdout evaluation of the saved best checkpoint
+(metrics epoch 64, `val_loss` 96.928), over **all 80,000 shard-8 holdout traces**:
+
+| Quantity | Paper Acc % / MeanRank / MaxRank | **Ours (80 k holdout)** | Chance |
+|---|---|---|---|
+| `rm` (α) | 100.00 / 0 / 0 | **99.996 / 0.003 / 255** | 0.391 % |
+| `rout` (β) | 18.25 / 4.78 / 65 | **10.480 / 10.517 / 114** | 0.391 % |
+| `p[i]` (π, 16-head mean) | 95.07 / 0.055 / 4.44 | **86.514 / 0.181 / 15** (73.9–99.7) | 6.25 % |
+| `c[i]` (masked S, 16-head mean) | 1.18 / 80.65 / 255 | **0.679 / 108.631 / 255** (0.35–1.07) | 0.391 % |
+
+α is **reproduced** (3 errors in 80,000). π is at 91 % of the paper's accuracy and every one of its
+16 heads is ≥ 11.8× chance held out — which formally reverses `T019:45`'s "the shuffle head is the
+hard one, not merely undertrained". β reaches **95 % of the paper's distance from the rank null**
+while its top-1 is 57 % of the paper's. `c` is near chance **in the paper as well** (1.18 %, mean
+rank 80.65 against a 127.5 null), so this is not a place where GPAM succeeded and we failed.
+Report + per-head detail: **`GPAM/artifacts/C-table11-report.md`**,
+`GPAM/artifacts/C-table11-holdout-{ep64,ep70}.json`.
+
+**Still open, and deliberately not improvised:** §7.1 key recovery (the "~80 traces" GE curve) and
+the permutation/tie null controls — Step 4 items 3–4. What this eval changes about them: `rm` at
+99.996 % held out now satisfies the paper's stated precondition for setting α by argmax, so the GE
+simulation is finally worth running; the binding uncertainty is `c` (0.679 % vs the paper's 1.18 %),
+which is the head the dissection actually scores on.
+
+**Historical, kept because it is the reason two earlier campaigns were misread:** in the monitor's
+own numbering the run sat within 0.15 nats of the 144.1746 chance total through **epoch 12** (which
+was still *worse* than chance at 144.3199) and broke out only at **epoch 13**: 140.4642 →
+**133.4385** → 130.8809. Do not read a GPAM curve before epoch 13. (The metrics CSV `epoch` column
+is 0-indexed, so CSV 11/12/13 are these monitor epochs 12/13/14 — the epoch-number ambiguity in the
+notes below is this off-by-one, not a disagreement about the data.)
 
 **Per-head HELD-OUT metrics, from the metrics CSV**
 (`gpam_raw_b0_..._20260929_212317_metrics.csv`; note the CSV `epoch` column is **0-indexed**, so
@@ -146,10 +172,22 @@ Train stayed pinned at chance while val degraded monotonically and super-linearl
 **2026-09-29 16:12 — the paper-faithful raw campaign is RUNNING.** `gpam_raw_b0_..._15_20260929_161220`: 34 heads (rm, rout, c[0..15], p[0..15]) on 1,000,000-point ASCADv2 raw traces, patch 400, batch 32, lr 3e-3, 150 epochs x 2,000 steps = 9.6M trace-instances, matching the paper's data exposure. 17,766,824 params. Launched with `setsid` so it survives session exit (the 09-25 run was killed by SIGHUP). Log `GPAM/artifacts/logs_raw/campaign34.log`; per-epoch `[chance-check]` against 144.1746; final Table 11 evaluation on all 80,000 holdout traces. Batch 64 was attempted first and **OOMs** because scaaml's GAU builds a 2500x2500 RoPE Toeplitz matrix per call (30.4/32 GiB at batch 32).
 
 
-`active` (Phase 1/2 in progress: paper-faithful training running on RTX 5090 across all 8 raw shards)
+`done` for Table 11 (raw 1 M-point campaign, 80 k never-seen holdout, 2026-10-04) — `open` for §7.1
+GE and the null controls. The campaign itself stopped at 76/150 epochs (killed externally, best
+checkpoint saved at metrics epoch 64).
 
 ## Result snapshot
 
+- **2026-10-04: TABLE 11 DELIVERED on raw 1 M-point traces (80 k never-seen holdout).** `rm`
+  **99.996 %** / mean rank 0.003 (paper 100.00 / 0) — 3 errors in 80,000; `p[i]` **86.514 %** /
+  0.181 with all 16 heads ≥ 11.8× chance and byte 15 at 99.736 % (paper 95.07 / 0.055); `rout`
+  **10.480 %** / 10.517, i.e. 95 % of the paper's distance from the rank null at 57 % of its top-1
+  (paper 18.25 / 4.78); `c[i]` **0.679 %** / 108.631 against a 127.5 null (paper 1.18 / 80.65) —
+  near chance in the paper too. Campaign record: 76/150 epochs, lr 1e-3, 38.4 min/epoch,
+  **killed externally at 2026-10-01 ~21:57, no traceback, no reboot — it did not crash**. Overfit
+  gap ~3.9 nats by epoch 75 (train 94.74 / val 98.61), best val 96.928 at epoch 64. `epoch_070`
+  lands within ±2 pp on all four, so this is not checkpoint-selection luck.
+  Write-up `GPAM/artifacts/C-table11-report.md`.
 - **2026-09-26: the full raw run's at-chance stall is explained by learning rate, not by the data pipeline.** The run died at epoch 33/150 on 2026-09-25 20:56 (killed, no traceback; no reboot, GPU idle since). Diagnosis:
   - `GPAM/raw_dataset.py` is **exonerated by ground truth** — labels derived from raw shard metadata match the extracted file's *stored* labels on all **40,000** traces joinable by `(key, plaintext, masks)`; the argsort/unsort path reconstructs traces bit-exactly; int8 genuinely fills [-128, 127] so `min=-128, delta=255` is right, and there is no unsigned wrap (signed neighbour steps 13.49 vs 34.31).
   - Memorization probe (`GPAM/artifacts/C-raw-overfit-probe.py`, 512 raw traces, 1,488 steps): at **lr 5e-5** total loss 19.4479 → **19.3071**, `rm` acc → 1.0% — it cannot memorize 512 traces, i.e. a hard stall. At **lr 1e-3** it descends monotonically and is still falling: 19.4429 → **9.5409**, `rm` acc 0 → **29.3%**. Chance CE total is 19.4081.
@@ -216,6 +254,11 @@ All scripts and evaluation outputs are organized under [`GPAM/`](file:///home/la
   - `C-gpam-ablation.json`: Mask ablation numbers.
   - `C-gpam-smoke.log` & `C-gpam-smoke-raw2.log`: Raw shard 8 smoke execution logs.
   - `C-talking-points.md`: Full technical talking points from Brief C.
+  - `C-table11-report.md`: **Final T-019 report** — Table 11 vs the paper, per-head detail, caveats.
+  - `C-table11-holdout-eval.py` + `C-table11-holdout-{ep64,ep70}.json`: the 80 k holdout evaluator
+    (inference only) and its results, including top-2/4/8/16 per head.
+  - `logs_raw/campaign34_1e-3.log`, `logs_raw/gpam_raw_..._20260929_212317_metrics.csv`: the 76-epoch
+    campaign and its per-epoch train/val curve.
 - **Dataset (Full Raw Campaign):**
   - Path: `STM32_AES_v2/ASCAD_data/ASCAD_databases/`
   - 8 shards: `ascadv2-stm32-conso-raw-traces1.h5` through `...8.h5` (100,000 traces × 1,000,000 points int8 each).
@@ -227,13 +270,15 @@ All scripts and evaluation outputs are organized under [`GPAM/`](file:///home/la
 ### 1. What the GPAM Paper Actually Reports (Table 11 is NOT Guessing Entropy)
 Table 11 (TCHES 2024, §7.1, p. 492) reports **machine learning metrics on the 80,000-trace holdout**, not key recovery:
 
-| Head | Meaning | Paper Acc % | Paper Mean Rank | Paper Max Rank | Our Local Acc % (Holdout / Attack) | Our Mean Rank | Status |
-|------|---------|-------------|-----------------|----------------|-------------------------------------|---------------|--------|
-| `rm` | Multiply mask $\alpha$ (`masks[18]`) | **100.00%** | 0.00 | 0 | **92.95% / 92.35%** | **0.083** | **Reproduced!** |
-| `rout` | Additive mask $\beta$ (`masks[17]`) | 18.25% | 4.78 | 65 | 2.75% / 2.75% | 36.05 | Below paper |
-| `c[i]` | Masked S-box byte (avg over 16) | **1.18%** | 80.65 | 255 | **0.65% / 0.50%** | **126.50** | **At chance** (null is 127.5) |
-| `p[i]` | Shuffle index (avg over 16) | 95.07% | 0.055 | 4.44 | 8.60% / 9.55% | 6.51 | Unlearned (null prior = 7.05%) |
+| Head | Meaning | Paper Acc % | Paper Mean Rank | Paper Max Rank | Crop run Acc % (15 k POI, 40 k train) | Crop Mean Rank | **Raw 1 M 34-head, 80 k holdout** | Raw Mean Rank | Status |
+|------|---------|-------------|-----------------|----------------|-------------------------------------|---------------|-----------------------------------|--------------|--------|
+| `rm` | Multiply mask $\alpha$ (`masks[18]`) | **100.00%** | 0.00 | 0 | 92.95% | 0.083 | **99.996 %** (3 errors / 80 k) | **0.003** | **Reproduced** |
+| `rout` | Additive mask $\beta$ (`masks[17]`) | 18.25% | 4.78 | 65 | 2.75% | 36.05 | **10.480 %** | **10.517** | 95 % of the paper's distance from the null; top-8 53.5 % |
+| `c[i]` | Masked S-box byte (avg over 16) | **1.18%** | 80.65 | 255 | 0.65% | 126.50 | **0.679 %** (0.35–1.07) | **108.63** | Near chance **in the paper too** (null 127.5) |
+| `p[i]` | Shuffle index (avg over 16) | 95.07% | 0.055 | 4.44 | 8.60% | 6.51 | **86.514 %** (73.9–99.7) | **0.181** | **Reproduced in kind** — was undertrained, not hard |
 
+- The raw column is `GPAM/artifacts/C-table11-holdout-ep64.json` — 80,000 shard-8 traces the optimizer
+  never saw, ties counted against the target. The crop column is the 2026-09-24 4-head run.
 - The paper's masked S-box accuracy is **1.18%** (only ~3× chance). GPAM's success is carried by predicting the **masks ($\alpha, \beta$) and shuffle ($\pi$)**, not by high-confidence S-box predictions.
 
 ### 2. The "~80 Traces" Key Recovery Claim
@@ -320,12 +365,32 @@ distinctive setting.
 - Save checkpoints every 10 epochs and evaluate on the 80k validation split.
 
 ### Step 4: Holdout Evaluation & Key Recovery
-- Evaluate best validation checkpoint on the 80,000 holdout traces from Shard 8.
-- Compute Table 11 metrics (`acc_pct`, `mean_rank`, `max_rank`) across all heads.
-- Run §7.1 fixed-key simulation ($pt \oplus key$, argmax $r_m$) over $[1, 10, 25, 50, 80, 100, 200, 500, 1000, 2000]$ traces to verify if GE < 1 is achieved at ~80 traces.
-- Run permutation and tie-breaking null controls to verify the result is signal-backed.
+
+- ✅ **Done 2026-10-04** — best-validation checkpoint (metrics epoch 64, `val_loss` 96.928) evaluated
+  on all **80,000** holdout traces from shard 8, plus `epoch_070` as a robustness check (both inside
+  ±2 pp on every quantity).
+- ✅ **Done 2026-10-04** — Table 11 metrics (`acc_pct`, `mean_rank`, `max_rank`) for all 34 heads,
+  with top-2/4/8/16 as well: `GPAM/artifacts/C-table11-holdout-eval.py` →
+  `C-table11-holdout-{ep64,ep70}.json`, write-up `GPAM/artifacts/C-table11-report.md`.
+- ⬜ **Open** — §7.1 fixed-key simulation ($pt \oplus key$, argmax $r_m$) over
+  $[1, 10, 25, 50, 80, 100, 200, 500, 1000, 2000]$ traces, to test the "GE < 1 at ~80 traces" claim.
+  Now unblocked in principle (`rm` 99.996 % held out meets the paper's own precondition), but the
+  score is carried by `c`, which is at 0.679 % against the paper's 1.18 %. Implement it against the
+  paper's exact scoring rule rather than improvising — the previous local `compute_ge` was deleted
+  for four documented faults.
+- ⬜ **Open** — permutation and tie-breaking null controls for whatever GE curve comes out.
 
 ---
+
+- **2026-10-04 (T-019 closed out):** the campaign's Table 11 holdout evaluation — the one deliverable
+  the external kill at epoch 76 left unproduced — was run from the saved checkpoints with
+  `GPAM/artifacts/C-table11-holdout-eval.py` (inference only, 6.1 min per checkpoint on 80,000
+  traces; `--max-batches 2500`). Ranking reuses the ties-counted-against-the-target rule, so a flat
+  head cannot fake MeanRank. `epoch_070` was evaluated as a control on checkpoint selection.
+  Results → `GPAM/artifacts/C-table11-report.md`; the task file's Status, Result snapshot, §1
+  comparison table and Step 4 checklist now carry the final numbers. The stale "IN FLIGHT, epoch 14"
+  header (and the INDEX row repeating it) is corrected: the run was **killed, not crashed**, best
+  epoch 64.
 
 - **2026-09-25 (reproduction implementation & queue launch):**
   - Implemented `GPAM/raw_dataset.py`: Streaming multi-shard HDF5 loader for all 8 shards (640k train, 80k val, 80k holdout) with vectorized labels.

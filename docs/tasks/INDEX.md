@@ -4,7 +4,7 @@ Registry of work units for this repository. Grok sessions should read this first
 
 **Active focus:** [T-028](./T028-v2-nonworstcase-pseudolabel-break.md) — non-worst-case ASCADv2 break (pseudo-label bootstrap); pending go/stop decision after Phase 1 NO-GO
 
-In parallel (other agent): [T-019](./T019-gpam-ascadv2-reproduction.md) — GPAM raw campaign eval
+Finished (this agent): [T-019](./T019-gpam-ascadv2-reproduction.md) — GPAM raw Table 11 delivered 2026-10-04 (`GPAM/artifacts/C-table11-report.md`)
 
 Survey (separate): [T-012](./T012-ascadv2-dl-survey.md) — canonical `docs/survey-ascadv2-dl-2022-2026.md` (root copies merged 2026-08-19)
 
@@ -32,7 +32,7 @@ Task files are named `TNNN-short-slug.md` (id prefix, zero-padded, no date).
 | T-016 | ASCADv1 Time-LLM GPT-2 standalone | done | ./T016-ascadv1-timellm-gpt2.md | 2026-10-04 | Negative result: 40-epoch reprogram at chance; family covered by T-020 survey |
 | T-017 | LLM methods organization & integration | paused | ./T017-llm-methods-organization.md | 2026-10-04 | Paused since 09-23; `LLM/` package + SimMIM embed mask token. Results summarised in T-020 survey |
 | T-018 | ASCADv1 segment value map | done | ./T018-ascadv1-segment-value-map.md | 2026-10-04 | `visualize/segment_value_map.ipynb` is the answer: crop 5 valued spans, 19% of samples |
-| T-019 | GPAM ASCADv2 reproduction (paper-faithful) | active | ./T019-gpam-ascadv2-reproduction.md | 2026-09-29 | **raw 1M traces DO transfer at 40k: held-out `rm`(α) 98.340%** on shard 2, gate `PASSES`, ~83h 34-head campaign launched 21:23. α-only (β/C/π at chance); worst-case, not a break. Supersedes the 19:00 "DO NOT GENERALISE at 4k" reading | |
+| T-019 | GPAM ASCADv2 reproduction (paper-faithful) | done | ./T019-gpam-ascadv2-reproduction.md | 2026-10-04 | **Table 11 delivered on raw 1M traces, 80k never-seen holdout: `rm` 99.996% (paper 100.00), `p[i]` 86.51% (paper 95.07, all 16 heads ≥11.8x chance), `rout` 10.48% (paper 18.25), `c[i]` 0.679% (paper 1.18 — near chance there too).** Campaign ran 76/150 epochs, killed externally 10-01, no crash; best ckpt ep64. Worst-case First Threat, not a key break; §7.1 GE still open. Report: `GPAM/artifacts/C-table11-report.md` | |
 | T-020 | LLM/Transformer SCA pipeline | paused | ./T020-llm-transformer-sca-pipeline.md | 2026-10-04 | Paused (focus → T-028): α readable from 16 oracle SNR bands = 93.95%; open problem is label-free band finding. Survey: `docs/notes/patch-pipeline-survey.md` |
 | T-021 | NVIDIA driver recovery (kernel mismatch) | done | ./T021-gpu-driver-kernel-mismatch.md | 2026-09-22 | Kernel 7.0.0-30 vs DKMS 6.17; rebuilt nvidia/580.142; RTX 5090 + py10 CUDA OK |
 | T-022 | Break-ASCAD roadmap (status tree) | in_progress | ./T022-break-ascad-roadmap.md | 2026-09-23 | Scoreboard unchanged. 14:00 plan points at it from `docs/2026-09-23/`; no strict v2 break |

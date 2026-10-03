@@ -1,0 +1,641 @@
+{
+  "model": "GPAM/artifacts/checkpoints_raw/gpam_raw_b0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_20260929_212317_epoch_070.keras",
+  "label": "checkpoint epoch_070",
+  "split": "holdout (shard 8 [20000:100000], never trained on)",
+  "n_batches": 2500,
+  "n_traces": 80000,
+  "batch_size": 32,
+  "tie_rule": "rank = #{classes with prob >= true-class prob} - 1 (ties counted against target)",
+  "elapsed_min": 6.0,
+  "finished_utc": "2026-10-03 16:47:37",
+  "group_summary": {
+    "rm": {
+      "n_heads": 1,
+      "acc_mean_pct": 99.94,
+      "acc_min_pct": 99.94,
+      "acc_max_pct": 99.94,
+      "mean_rank_mean": 0.004,
+      "max_rank_worst": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "best_head": "rm",
+      "worst_head": "rm"
+    },
+    "rout": {
+      "n_heads": 1,
+      "acc_mean_pct": 12.335,
+      "acc_min_pct": 12.335,
+      "acc_max_pct": 12.335,
+      "mean_rank_mean": 9.376,
+      "max_rank_worst": 131,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "best_head": "rout",
+      "worst_head": "rout"
+    },
+    "p (shuffle index)": {
+      "n_heads": 16,
+      "acc_mean_pct": 84.75,
+      "acc_min_pct": 69.746,
+      "acc_max_pct": 98.638,
+      "mean_rank_mean": 0.217,
+      "max_rank_worst": 15,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "best_head": "p_15",
+      "worst_head": "p_9"
+    },
+    "c (masked S-box)": {
+      "n_heads": 16,
+      "acc_mean_pct": 0.714,
+      "acc_min_pct": 0.401,
+      "acc_max_pct": 1.13,
+      "mean_rank_mean": 107.014,
+      "max_rank_worst": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "best_head": "c_0",
+      "worst_head": "c_14"
+    }
+  },
+  "per_head": {
+    "rm": {
+      "acc_pct": 99.94,
+      "mean_rank": 0.004,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.0,
+      "acc_over_chance": 255.85,
+      "topk_pct": {
+        "1": 99.94,
+        "2": 99.996,
+        "4": 99.999,
+        "8": 99.999,
+        "16": 99.999
+      },
+      "n_traces": 80000
+    },
+    "rout": {
+      "acc_pct": 12.335,
+      "mean_rank": 9.376,
+      "max_rank": 131,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.0735,
+      "acc_over_chance": 31.58,
+      "topk_pct": {
+        "1": 12.335,
+        "2": 21.98,
+        "4": 37.036,
+        "8": 58.368,
+        "16": 80.539
+      },
+      "n_traces": 80000
+    },
+    "c_0": {
+      "acc_pct": 1.13,
+      "mean_rank": 85.7,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.6722,
+      "acc_over_chance": 2.89,
+      "topk_pct": {
+        "1": 1.13,
+        "2": 2.098,
+        "4": 3.985,
+        "8": 7.439,
+        "16": 13.586
+      },
+      "n_traces": 80000
+    },
+    "p_0": {
+      "acc_pct": 89.897,
+      "mean_rank": 0.137,
+      "max_rank": 13,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0183,
+      "acc_over_chance": 14.38,
+      "topk_pct": {
+        "1": 89.897,
+        "2": 97.388,
+        "4": 99.861,
+        "8": 99.987,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_1": {
+      "acc_pct": 1.057,
+      "mean_rank": 86.038,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.6748,
+      "acc_over_chance": 2.71,
+      "topk_pct": {
+        "1": 1.057,
+        "2": 1.96,
+        "4": 3.848,
+        "8": 7.359,
+        "16": 13.527
+      },
+      "n_traces": 80000
+    },
+    "p_1": {
+      "acc_pct": 89.439,
+      "mean_rank": 0.145,
+      "max_rank": 12,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0193,
+      "acc_over_chance": 14.31,
+      "topk_pct": {
+        "1": 89.439,
+        "2": 97.155,
+        "4": 99.812,
+        "8": 99.994,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_2": {
+      "acc_pct": 0.857,
+      "mean_rank": 97.423,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.7641,
+      "acc_over_chance": 2.2,
+      "topk_pct": {
+        "1": 0.857,
+        "2": 1.659,
+        "4": 3.066,
+        "8": 6.184,
+        "16": 11.482
+      },
+      "n_traces": 80000
+    },
+    "p_2": {
+      "acc_pct": 86.344,
+      "mean_rank": 0.176,
+      "max_rank": 14,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0235,
+      "acc_over_chance": 13.81,
+      "topk_pct": {
+        "1": 86.344,
+        "2": 96.814,
+        "4": 99.873,
+        "8": 99.994,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_3": {
+      "acc_pct": 0.596,
+      "mean_rank": 107.328,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.8418,
+      "acc_over_chance": 1.53,
+      "topk_pct": {
+        "1": 0.596,
+        "2": 1.291,
+        "4": 2.486,
+        "8": 4.889,
+        "16": 9.225
+      },
+      "n_traces": 80000
+    },
+    "p_3": {
+      "acc_pct": 69.93,
+      "mean_rank": 0.481,
+      "max_rank": 15,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0641,
+      "acc_over_chance": 11.19,
+      "topk_pct": {
+        "1": 69.93,
+        "2": 88.538,
+        "4": 98.58,
+        "8": 99.858,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_4": {
+      "acc_pct": 0.464,
+      "mean_rank": 121.154,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.9502,
+      "acc_over_chance": 1.19,
+      "topk_pct": {
+        "1": 0.464,
+        "2": 0.941,
+        "4": 1.932,
+        "8": 3.769,
+        "16": 7.42
+      },
+      "n_traces": 80000
+    },
+    "p_4": {
+      "acc_pct": 91.374,
+      "mean_rank": 0.112,
+      "max_rank": 15,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0149,
+      "acc_over_chance": 14.62,
+      "topk_pct": {
+        "1": 91.374,
+        "2": 98.081,
+        "4": 99.919,
+        "8": 99.995,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_5": {
+      "acc_pct": 0.699,
+      "mean_rank": 107.013,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.8393,
+      "acc_over_chance": 1.79,
+      "topk_pct": {
+        "1": 0.699,
+        "2": 1.311,
+        "4": 2.489,
+        "8": 4.915,
+        "16": 9.428
+      },
+      "n_traces": 80000
+    },
+    "p_5": {
+      "acc_pct": 88.86,
+      "mean_rank": 0.15,
+      "max_rank": 10,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.02,
+      "acc_over_chance": 14.22,
+      "topk_pct": {
+        "1": 88.86,
+        "2": 97.093,
+        "4": 99.847,
+        "8": 99.994,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_6": {
+      "acc_pct": 1.034,
+      "mean_rank": 87.949,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.6898,
+      "acc_over_chance": 2.65,
+      "topk_pct": {
+        "1": 1.034,
+        "2": 1.948,
+        "4": 3.725,
+        "8": 7.196,
+        "16": 13.301
+      },
+      "n_traces": 80000
+    },
+    "p_6": {
+      "acc_pct": 84.11,
+      "mean_rank": 0.219,
+      "max_rank": 15,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0292,
+      "acc_over_chance": 13.46,
+      "topk_pct": {
+        "1": 84.11,
+        "2": 95.847,
+        "4": 99.654,
+        "8": 99.984,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_7": {
+      "acc_pct": 0.434,
+      "mean_rank": 126.559,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.9926,
+      "acc_over_chance": 1.11,
+      "topk_pct": {
+        "1": 0.434,
+        "2": 0.796,
+        "4": 1.628,
+        "8": 3.365,
+        "16": 6.557
+      },
+      "n_traces": 80000
+    },
+    "p_7": {
+      "acc_pct": 92.029,
+      "mean_rank": 0.1,
+      "max_rank": 15,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0133,
+      "acc_over_chance": 14.72,
+      "topk_pct": {
+        "1": 92.029,
+        "2": 98.433,
+        "4": 99.91,
+        "8": 99.996,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_8": {
+      "acc_pct": 0.749,
+      "mean_rank": 101.748,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.798,
+      "acc_over_chance": 1.92,
+      "topk_pct": {
+        "1": 0.749,
+        "2": 1.498,
+        "4": 2.875,
+        "8": 5.688,
+        "16": 10.714
+      },
+      "n_traces": 80000
+    },
+    "p_8": {
+      "acc_pct": 80.826,
+      "mean_rank": 0.273,
+      "max_rank": 15,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0365,
+      "acc_over_chance": 12.93,
+      "topk_pct": {
+        "1": 80.826,
+        "2": 94.309,
+        "4": 99.477,
+        "8": 99.974,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_9": {
+      "acc_pct": 1.024,
+      "mean_rank": 88.292,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.6925,
+      "acc_over_chance": 2.62,
+      "topk_pct": {
+        "1": 1.024,
+        "2": 1.972,
+        "4": 3.637,
+        "8": 6.97,
+        "16": 12.935
+      },
+      "n_traces": 80000
+    },
+    "p_9": {
+      "acc_pct": 69.746,
+      "mean_rank": 0.458,
+      "max_rank": 12,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0611,
+      "acc_over_chance": 11.16,
+      "topk_pct": {
+        "1": 69.746,
+        "2": 89.648,
+        "4": 98.615,
+        "8": 99.959,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_10": {
+      "acc_pct": 0.598,
+      "mean_rank": 111.115,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.8715,
+      "acc_over_chance": 1.53,
+      "topk_pct": {
+        "1": 0.598,
+        "2": 1.238,
+        "4": 2.456,
+        "8": 4.662,
+        "16": 8.975
+      },
+      "n_traces": 80000
+    },
+    "p_10": {
+      "acc_pct": 79.731,
+      "mean_rank": 0.284,
+      "max_rank": 15,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0378,
+      "acc_over_chance": 12.76,
+      "topk_pct": {
+        "1": 79.731,
+        "2": 94.261,
+        "4": 99.629,
+        "8": 99.992,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_11": {
+      "acc_pct": 0.492,
+      "mean_rank": 122.413,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.9601,
+      "acc_over_chance": 1.26,
+      "topk_pct": {
+        "1": 0.492,
+        "2": 0.958,
+        "4": 1.896,
+        "8": 3.66,
+        "16": 7.147
+      },
+      "n_traces": 80000
+    },
+    "p_11": {
+      "acc_pct": 70.334,
+      "mean_rank": 0.458,
+      "max_rank": 15,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0611,
+      "acc_over_chance": 11.25,
+      "topk_pct": {
+        "1": 70.334,
+        "2": 89.584,
+        "4": 98.508,
+        "8": 99.969,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_12": {
+      "acc_pct": 0.426,
+      "mean_rank": 127.107,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.9969,
+      "acc_over_chance": 1.09,
+      "topk_pct": {
+        "1": 0.426,
+        "2": 0.818,
+        "4": 1.621,
+        "8": 3.184,
+        "16": 6.296
+      },
+      "n_traces": 80000
+    },
+    "p_12": {
+      "acc_pct": 88.373,
+      "mean_rank": 0.153,
+      "max_rank": 15,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0204,
+      "acc_over_chance": 14.14,
+      "topk_pct": {
+        "1": 88.373,
+        "2": 97.196,
+        "4": 99.858,
+        "8": 99.991,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_13": {
+      "acc_pct": 0.41,
+      "mean_rank": 126.876,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.9951,
+      "acc_over_chance": 1.05,
+      "topk_pct": {
+        "1": 0.41,
+        "2": 0.8,
+        "4": 1.609,
+        "8": 3.16,
+        "16": 6.465
+      },
+      "n_traces": 80000
+    },
+    "p_13": {
+      "acc_pct": 85.764,
+      "mean_rank": 0.199,
+      "max_rank": 9,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0265,
+      "acc_over_chance": 13.72,
+      "topk_pct": {
+        "1": 85.764,
+        "2": 95.945,
+        "4": 99.688,
+        "8": 99.994,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_14": {
+      "acc_pct": 0.401,
+      "mean_rank": 127.62,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 1.0009,
+      "acc_over_chance": 1.03,
+      "topk_pct": {
+        "1": 0.401,
+        "2": 0.783,
+        "4": 1.498,
+        "8": 3.107,
+        "16": 6.207
+      },
+      "n_traces": 80000
+    },
+    "p_14": {
+      "acc_pct": 90.599,
+      "mean_rank": 0.117,
+      "max_rank": 13,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0155,
+      "acc_over_chance": 14.5,
+      "topk_pct": {
+        "1": 90.599,
+        "2": 98.225,
+        "4": 99.906,
+        "8": 99.997,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    },
+    "c_15": {
+      "acc_pct": 1.054,
+      "mean_rank": 87.891,
+      "max_rank": 255,
+      "chance_acc_pct": 0.391,
+      "chance_mean_rank": 127.5,
+      "mean_rank_ratio_vs_chance": 0.6893,
+      "acc_over_chance": 2.7,
+      "topk_pct": {
+        "1": 1.054,
+        "2": 1.989,
+        "4": 3.667,
+        "8": 7.11,
+        "16": 13.23
+      },
+      "n_traces": 80000
+    },
+    "p_15": {
+      "acc_pct": 98.638,
+      "mean_rank": 0.017,
+      "max_rank": 7,
+      "chance_acc_pct": 6.25,
+      "chance_mean_rank": 7.5,
+      "mean_rank_ratio_vs_chance": 0.0023,
+      "acc_over_chance": 15.78,
+      "topk_pct": {
+        "1": 98.638,
+        "2": 99.718,
+        "4": 99.987,
+        "8": 100.0,
+        "16": 100.0
+      },
+      "n_traces": 80000
+    }
+  }
+}

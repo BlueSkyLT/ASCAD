@@ -104,11 +104,11 @@ Evaluate whether training multi-task TimesNet (`timesnet_multi` / `timesnet_asca
   - Epoch 7/15: train_loss =  84.3233, val_loss = 102.9506 (33.7s, best val checkpoint saved)
   - Epoch 15/15: train_loss = 13.1057, val_loss = 141.3470 (34.2s)
   - Total training time: 517.0s (8.6 min).
-- **Head Accuracies on Attack Traces**:
-  - $\pi$ Permutation Index: **67.42%** (chance: 6.25% = 1/16, over 10× chance)
-  - Masked S-box $C$: **0.72%** (chance: 0.39% = 1/256)
-  - $\alpha$ Mask: **0.49%** (chance: 0.39%)
-  - $\beta$ Mask: **0.41%** (chance: 0.39%)
+- **Head Accuracies on Attack Traces** (recomputed 2026-10-04 from cached predictions):
+  - $\pi$ Permutation Index: **67.03%** (chance: 6.25% = 1/16, over 10× chance)
+  - Masked S-box $C$: **0.69%** (chance: 0.39% = 1/256)
+  - $\alpha$ Mask: **100.00%** (chance: 0.39%)
+  - $\beta$ Mask: **5.84%** (chance: 0.39%)
 - **Attack Evaluation (5,000 traces, `multilabel_predict`)**:
   - **ALL 16 BYTES reached Final Rank = 0 and Min Rank = 0**.
 - **Rigorous Verification & Null-Hypothesis Controls**:

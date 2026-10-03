@@ -208,7 +208,7 @@ ASCADv2
 │   └── MultiResNet 34-Head (pure PyTorch, sub_avg, 137.4M params) ... ran@all-16 win@all-16 all-16 v2 multi-task OK ★ FULL 16-BYTE BREAK
 │         50k profiling, 15 epochs (8.6 min wall-clock on RTX 5090), RAdam + AMP. Evaluated on 5k attack traces:
 │         ALL 16 BYTES reach Rank 0 (Byte 0–15 z-scores: +3.89σ to +6.86σ @1k traces; shuffled trace control mean rank = 143.8, 0/16 bytes at rank 0).
-│         Permutation index top-1 accuracy = 67.42% (chance 6.25%).
+│         Permutation index top-1 accuracy = 67.03% (chance 6.25%); α head 100.00%, β head 5.84% (recomputed 2026-10-04, corrects prior 0.49%/0.41%).
 │         [A] STM32_AES_v2/ASCAD_data/ASCAD_trained_models/multiresnet_34h_50k_subavg.pth (+ config, eval.json, 16bytes_rank.png)
 
 ├── Black-box, S-box target + Scoop optimizer (T-011) — seed 0, Scoop split 200k train / 1k val / 300k GE, no mask labels

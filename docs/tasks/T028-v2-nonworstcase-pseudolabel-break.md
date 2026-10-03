@@ -2,11 +2,13 @@
 
 ## Status
 
-`active` — **current focus (set 2026-10-04).** Open item is the go/stop decision below; Phase 0 done (baseline verified, rank-tie hazard found); Phase 1 executed and
-closed NO-GO with a measured cause (α owns only 1.3× the trace variance of a random 255-way
-split); Phase 2 depends on pseudo-labels Phase 1 showed are unobtainable by variance/PCA
-methods; the Step 3.1 fallback is not executable as written. Awaiting a decision — see the
-2026-10-03 Phase 1 log entry.
+`active` — **current focus (set 2026-10-04; T-029 is the side task).** Phase 0 done (baseline
+verified, rank-tie hazard found). Phase 1 (variance-ranked selectors + k-means) closed NO-GO with
+a measured cause. **2026-10-04 evidence review reopened the question as Phase 1R**: Phase 1 never
+separated *finding α's bands* from *clustering them*, and never clustered the oracle bands, so
+"α is not recoverable label-free" is not yet established. Phase 1R is a CPU-only Tier-0 battery
+(R1–R7, no GPU) with a hard stop gate at R2. Phase 2 stays blocked until R2 passes; the Step 3.1
+fallback is still not executable as written. **Phase 1R approved by the user 2026-10-04 (thresholds frozen); R1 → R2 in progress** — see the 2026-10-04 log entry.
 
 ## Goal
 
@@ -49,10 +51,14 @@ These are confirmed results. An executing agent should use them as ground truth,
 | SNR(π) = 0.13 at sample 5552 (crop), 0.21 at 282070 (raw) | `docs/snr_investigation.md` | 1 sample > 0.1 in crop, 27 in raw |
 | SNR(C) = 0.072 everywhere, 0 samples > 0.1 | `docs/snr_investigation.md` | Identical in crop and raw |
 | MultiResNet 34h + sub_avg: all 16 bytes rank 0 at 5k traces | T-024 | z-scores +3.89σ to +6.86σ |
-| MultiResNet head accs: π 67.42%, C 0.72%, α 0.49%, β 0.41% | T-024 | On 5k attack traces |
+| MultiResNet head accs, 5k attack traces, **recomputed 2026-10-04** from `experiments/out/head_preds_5k.npz` vs `Attack_traces/labels`: **α 100.00%**, β 5.84%, C 0.69%, π 67.03%. Log-lik gain over uniform: α +5.48 nats (max 5.545), β +1.51, π +1.80 (max 2.77), **C −0.09** | this session | Corrects T-024's "α 0.49%, β 0.41%" (wrong label column, source not located). Same error appears in `T024:108-111`, `docs/notes/patch-pipeline-survey.md:196`, `docs/roadmap-break-ascad.md:211` and **has been corrected in all three locations** (2026-10-04). α is `masks[:,18]`, β is `masks[:,17]` |
 | 3O centered product: corr = 0.0009 (dead) | `docs/notes/ascadv2-direct-evidence-explained.md` | All 16 bytes within noise |
 | Averaging 2 adjacent samples: 86% → 0.83% accuracy | T-020 / `patch-pipeline-survey.md` | Resolution is binding constraint |
-| Variance localizer: detects α at patch 108, β at patch 42 | T-025 | Without any labels |
+| Variance localizer flags α's patch 108 and β's patch 42 — but it also flags **90% of all patches** active (1686/1874) | T-025 | Without labels, but not a band selector: Phase 1 measured SNR-band recall 0.000 for label-free variance selectors. The old wording "detects α" overstated it |
+| `desync` metadata is exactly 0 on all 20k profiling and 10k attack traces checked | this session | No artificial jitter was applied. Says nothing about natural clock/sub-sample jitter (untested — see D5) |
+| `sub_avg` = subtract the **global profiling mean trace** (one value per sample position), no labels, nothing per-trace | `ASCAD_train_models.py:1157-1160`, `ASCAD_test_models.py:948-953` | Provable no-op for the band probe (SNR-16 0.9395 → 0.9395). **No 34-head MultiResNet run without it exists**, so T-024's 16/16 cannot be credited to `sub_avg` |
+| Mean-of-2 / 4 / 8 adjacent samples: α top-1 0.8603 → 0.0083 / 0.0065 / 0.0090 (same 1,600 samples, 2-layer MLP) | `LLM/band_scan.py`, `RESOL-SUBAVG.log` | Sum of adjacent samples destroys α; the *difference* has never been tested (D3) |
+| SNR(π) was computed on **`perm_index[:,0]` only**, plain between/within variance, K=16. Peak 0.2085 = 227× its null floor (0.0009); β 1.42 = 90× its floor (0.0158) | `C-snr-profile.py:34-41,64-79`, fork recomputation | Across all 16 π bytes, Spearman(accuracy, peak SNR) = 0.10, so first-order peak SNR does not predict learnability of π |
 | AE localizer: 126/1874 patches flagged as active (6.7%) | T-026 | 10× more selective than variance |
 | WPP23 collision: ~70k traces shuffle OFF, ~8.4M shuffle ON | `docs/survey-ascadv2-dl-2022-2026.md` | 120× blowup from shuffle |
 
@@ -227,6 +233,133 @@ These are confirmed results. An executing agent should use them as ground truth,
 
 ---
 
+### Phase 1R: Phase 1 re-opened — evidence review + CPU-only Tier-0 battery (I:H U:H S:M)
+
+Added 2026-10-04. Steps 1.1–1.3 above stay as the record of what was tried. Run everything in
+`py10`. Tier-0 uses **no GPU**. Labels appear only as an *oracle for scoring or understanding*,
+and every such number is tagged ORACLE — none of it is a non-worst-case step.
+
+Evidence tags: **M** = measured this session (re-verified by me), **F** = read or computed by a
+research fork from code/logs and not independently re-verified, **I** = inferred, untested.
+
+#### A. What the worst-case classifier actually does (what any label-free route must reproduce)
+
+| # | Component | Evidence | Tag |
+|---|-----------|----------|-----|
+| 1 | α is read **at full per-sample resolution** from a window of ~871 crop samples (14,576 raw). Supervised MLP on 16 SNR bands: 93.95% | `LLM/band_scan.py`, T-020 | F |
+| 2 | **Averaging** adjacent samples kills α (0.8603 → 0.0083 / 0.0065 / 0.0090 for mean-of-2/4/8); **patching does not**: GPAM uses 150-sample (crop) and 400-sample (raw) tokens and gets 92.95% / 99.996%, because a learned `Dense(192)` per patch keeps a separate weight per sample | `RESOL-SUBAVG.log`, `scaaml/models/gpam.py` | F |
+| 3 | Every token attends to every token (3 gated-attention blocks, learned Toeplitz/RoPE bias). α, β, π sit in different patches (~513, ~513, ~705 at patch 400), so the model must mix across them. Heads are 34 independent dense stacks on one shared pooled vector; `output_relations=[]`, so **the model is never told** C = α⊗S⊕β | `train_gpam_raw_full.py`, `gpam.py` | F |
+| 4 | **Phase transition, not a slope**: epochs 0–11 at chance; α jumps 18.6% → 91% at epochs 12→13; every π head leaves chance in epochs 12–16; β stays <5% until epoch 38 and passes 10% only at epoch 61; C never leaves chance (~0.6%) | `…212317_metrics.csv` | F |
+| 5 | The α head is **essentially solved** (100.00% on the 5k attack traces); β is weak (5.84%, +1.51 nats); π is moderate (67.0%, +1.80 nats of 2.77); the 16 C heads score **below uniform** on their own labels (−0.09 nats) | recomputed from `head_preds_5k.npz` | **M** |
+| 6 | α and β are **each near-essential** for the key: zeroing α alone leaves 2/16 bytes, zeroing β alone 1/16 (Phase 0). π is not (12/16 without it) | Phase 0 table | **M** |
+| 7 | The algebra (C = α⊗S⊕β, α and β shared by all 16 slots) is used **only as a decoder** after the heads are trained. Joint (α,β) decoding across slots is not implemented; the code marginalises per slot | `ASCAD_test_models.py:745-773` | F |
+| 8 | No exploitable prior: α, β and each `perm_index` column are uniform (χ² below critical), MI(α,β) = 0.0661 vs 0.0671 shuffled null | 500k profiling traces | F |
+
+**Why π is learned better than β although SNR(π) = 0.13 < SNR(β) = 1.4** — three measured facts
+dissolve most of the paradox:
+
+1. *The SNR yardstick is not comparable.* SNR(π) was computed on `perm_index[:,0]` only, K=16;
+   its raw peak 0.2085 is **227× its own null floor** (0.0009), while β's 1.42 is 90× its floor
+   (0.0158). Relative to chance, π's peak is the stronger first-order signal. (F)
+2. *Chance level.* β: 8 bits, π: 4 bits. By information the two heads are close: MultiResNet β
+   +1.51 nats vs π +1.80 nats. π's 67% looks large only because 1/16 is a high chance level. (M)
+3. *Peak SNR does not predict learnability of π.* Across the 16 π heads, Spearman(accuracy,
+   peak SNR) = 0.10 and (accuracy, summed SNR) = 0.09; byte 15 has the most spread-out SNR and the
+   best accuracy (99.7%). π is a **control-flow / which-slot-when** label, so it is probably
+   carried by where a pattern occurs and by many weak samples, which a single-sample amplitude
+   SNR cannot see. (F for the correlations, I for the mechanism)
+
+What this tells us: **do not use first-order single-sample SNR as the gate for a label-free
+method**, and do not read "SNR(π) tiny" as "π hidden". It does *not* make π the way in: π is not
+essential for the key (Phase 0), and α and β are.
+
+**"Can we exploit the α/β/C/π relationship or the shared 256-symbol space?"** — assessed, and
+the answer is *not for producing labels*:
+
+- α and β each **leak directly** (SNR 2.0 and 1.4) and are statistically independent of one
+  another and of (p,k). So each can in principle be recovered on its own band; the C relation is
+  not needed to create pseudo-labels. (M for independence, I for the conclusion)
+- The only relation that would help label-free is the pairwise one,
+  C_a ⊕ C_b = α⊗(S_a ⊕ S_b) (β cancels). It requires **C to be readable**, and it is not:
+  SNR(C) = 0.072 (0 samples > 0.1) and the C heads score below uniform (M). Tied-weight / shared
+  256-codebook ideas give no extra signal, since a uniform output satisfies every consistency
+  constraint.
+- EM over the joint latent (α,β) is the Phase 1 floor again (65,280 components, ~1.3× variance
+  excess). (I)
+- So the relations are **decoders and validators** (joint (α,β) marginalisation, Hungarian over
+  the 16×16 π matrix), not label sources. They raise the worst-case baseline (R6); they do not
+  make a non-worst-case run.
+
+**How to reduce the "background waveform", and is resolution a must?**
+
+- `sub_avg` = subtract the *global* mean trace (`ASCAD_train_models.py:1157-1160`). It removes
+  only the static, fixed-position, data-independent template. It is a **provable no-op** for the
+  band probe (0.9395 → 0.9395) and there is **no 34-head run without it**, so its role in T-024
+  is unmeasured. Its reputation ("removes 88% of variance") has no source artifact. (F)
+- The 3-tier anatomy puts the opcode wave at ~94.5% of *amplitude* (not variance) and data
+  leakage at ~5.5%. The remaining ~98% of variance is not decomposed anywhere (shuffle-induced
+  data variance, per-trace π structure, noise). `desync` metadata is 0 everywhere (M), which
+  rules out *injected* jitter only. (F/M)
+- TimesNet's FFT-period front end *folds* clock periodicity rather than suppressing it, and the
+  v2 runs used `input_stride=5` plus a 32-segment pool — subsampling, which the resolution
+  result predicts is fatal for α. The TimesNet v2 nulls therefore do not test these hypotheses,
+  and **TimesNet should not be revived for this task**. (F/I)
+- **Resolution verdict:** keep per-sample information *inside the first learned layer* (patchify,
+  then learn a linear map over raw samples, as GPAM does). Coarse tokens are fine; averaging or
+  strided subsampling is not. Nothing varies patch size inside a working model (gap, G2).
+
+#### B. Why Phase 1 is not yet a verdict (three gaps)
+
+1. **Selection and clustering were never separated.** Phase 1 used variance, normalised variance
+   and random selectors only; SNR was a post-hoc overlap diagnostic. No `unsup_alpha*.py` run
+   clustered the SNR-selected bands. If that clustering also sits at the null, the problem is
+   clustering. If it works, the bottleneck is band *finding*. We currently cannot say which.
+2. **Variance is the wrong band statistic.** The variance scanner flags 90% of patches, and
+   SNR-band recall was 0.000. Higher-order statistics (excess kurtosis, bimodality, per-sample
+   mixture BIC) have never been tried as label-free band finders.
+3. **The target may be mis-specified.** A 255-way Hungarian match has a 2.0% inflation floor and
+   treats α as an unordered label. If α leaks bit-wise or by Hamming weight, the right latent is
+   8 binary variables, and a per-bit agreement metric is orders of magnitude more sensitive.
+
+#### C. Tier-0 battery (CPU only, ~hours). Thresholds below are **proposed**; approved and frozen 2026-10-04 by the user; they cannot be moved after any R-number is seen.
+
+| ID | Test | Purpose / gate |
+|----|------|----------------|
+| R1 | **Leakage model of α and β** (ORACLE, understanding only): on the SNR>0.1 band, between-class R² of the samples against (a) the 8 label bits, (b) Hamming weight, (c) 255-way one-hot. Also β | Decides whether the label-free target is 255 classes or 8 binary latents, which fixes R2's design. No gate |
+| R2 | **Oracle-band clustering gate (decisive).** Cluster the SNR>0.1 band of α (871 samples, 50k traces): (a) 8-bit factored latent (sign of leading PCs / ICA / binary mixture), (b) 255-way GMM/k-means. Score by **per-bit agreement** (chance 0.5, shuffled-label null) and NMI vs null, never Hungarian-255 alone | **PASS** = pseudo-α exact-match ≥ 10% (≈ 0.75 per-bit if the 8 bit errors are independent, since 0.75⁸ ≈ 0.10; 10% is ~25× chance and about GPAM's holdout β head, 10.48%, the weakest mask head the worst-case pipeline still uses — a judgement, not a derived minimum). **STOP** if per-bit < 0.55. 0.55–0.75 is a grey zone: continue only if R3 shows a route |
+| R3 | **Label-free band finders beyond variance**: per-sample excess kurtosis, bimodality / mixture-BIC, pairwise-sample dependence. Score by enrichment of SNR>0.1 in the top-871 (random base rate 871/15000 = 5.8%) | Run only if R2 passes. **PASS** = precision ≥ 29% (≥ 5× random) **and** R2's clustering on the *selected* bands recovers ≥ half of R2's oracle-band per-bit agreement |
+| R4 | **Background/resolution ablation inside the supervised probe** (same 2-layer MLP, same 1,600 samples, same α label): raw / global-mean subtraction (reproduce the no-op) / per-trace mean + scale / top-k PCA removal / **adjacent difference** x[t]−x[t−1] / adjacent mean (reproduce the 0.008 kill) | Tests "α lives in fine structure": the difference should survive while the sum dies. Picks the label-free front end that is also resolution-preserving. Falsifier: if the difference also collapses, α needs absolute level |
+| R5 | **Variance budget by source** (ORACLE, understanding only): per-sample fraction explained by α, β, π, the 16 known S, top-k label-free PCs, residual. Plus a clock-phase lag test (cross-correlation of each trace to the mean in a quiet region) to check for *natural* jitter | Decomposes the ~98% nobody has measured; says whether re-alignment or PCA removal is worth building |
+| R6 | **Decoder upside on cached heads** (zero GPU, `head_preds_5k.npz`): Hungarian assignment over the 16×16 π matrix vs the 67.0% argmax; joint (α,β) marginalisation over the 16 slots vs per-slot dissection on ~200 traces | Raises the **worst-case** baseline bar. Not a non-worst-case step; say so in any report |
+| R7 | **Re-verify two fork-reported anomalies**: (a) substituting the *true* β for the β head lowers key z (−0.02 to −0.11); (b) C heads are below uniform (−0.09, M) yet are the structural carrier (Phase 0) | If (a) holds, Phase 0's "C is the carrier" is incomplete and Phase 2's pseudo-C training target needs rethinking before any GPU is spent |
+
+#### D. Decision tree after Tier-0
+
+- **R2 fails** → close the pseudo-label bootstrap. State it as: *α is not recoverable
+  label-free by clustering even from its oracle band.* The remaining routes are the Tier-1
+  runs below, with an explicit expectation of null.
+- **R2 passes, R3 fails** → the task becomes label-free **band finding**. Candidates, each
+  needing an R3-style enrichment gate: higher-order statistics, SimMIM-embedding saliency
+  (T-017 never made it a key signal, so lowest priority), bootstrapping bands from the
+  attributions of a weakly trained network.
+- **R2 and R3 pass** → Phase 2 unblocked for α. **β gets its own R2/R3 pair** (55-sample band,
+  SNR 1.4, and supervised β is only 5.8–14%), so expect it to be the harder gate.
+
+#### E. Tier-1 (GPU; ask first; total budget ≤ 2 h; only after the Tier-0 gate)
+
+- **G1 label-efficiency curve:** α-head accuracy vs number of mask-labelled traces (1k / 5k /
+  20k / full). Quantifies how close a "few labels" regime is. Not itself non-worst-case.
+- **G2 patch-size sweep at fixed label inside a working model** (α-only, patch 25/50/100/200/400):
+  the missing experiment behind "do we need token-level resolution".
+- **G3 S-only end-to-end** (no mask labels) with a GPAM-style backbone, hard epoch budget, and
+  the pre-registered chance-line stop rule from T-029. Expect null: with shuffle on and no
+  first-order foothold, GPAM itself sat at chance for 12 epochs *with* α supervision.
+
+**Do not:** cite the 93.95% band result as a non-worst-case number (it uses α labels to pick
+bands); report any rank without the tie/flatness check; revive TimesNet for v2.
+
+---
+
 ### Phase 2: Pseudo-Label Multi-Task Training & Key Recovery (I:H U:M S:M)
 
 **Purpose:** Train the same MultiResNet 34-head model using pseudo-labels from Phase 1, then attempt key recovery.
@@ -293,12 +426,37 @@ These are confirmed results. An executing agent should use them as ground truth,
 
 ## Decisions
 
+- 2026-10-04: Phase 1 re-opened as **Phase 1R**. The NO-GO stands for variance-ranked selection + k-means only. Order of work: R1 → R2 (hard stop gate) → R3 → R4–R7. Thresholds in the plan were approved and frozen by the user on 2026-10-04. The task goal is unchanged (no mask labels in training); every ORACLE number is for understanding only.
+- 2026-10-04: The α/β/C/π algebra is treated as a **decoder and validator**, not a label source: α and β leak directly and independently, and the pairwise C relation needs C readable (SNR 0.072). Do not spend effort on EM over the joint (α,β) latent or on tied/shared-codebook heads.
 - 2026-10-03: Created as distinct from T-020 (which was the LLM/Transformer pipeline) and T-024 (which was worst-case multi-task). This task is specifically about the non-worst-case / pseudo-label bootstrap approach.
 - 2026-10-03: Grounded in `docs/snr_investigation.md` — C is invisible everywhere (SNR 0.072, 4.6× noise floor). No approach in this task may assume C is detectable from the trace.
 - 2026-10-03: C pseudo-labels are COMPUTED from pseudo-α + pseudo-β + known (plaintext, key), not observed from traces. This is the central technical insight.
 - 2026-10-03: Phase 0 ablation runs BEFORE any unsupervised work, to determine which heads are essential and which can be skipped.
 
 ## Working notes / session log
+
+### 2026-10-04 — Phase 1R: evidence review of what makes ASCADv2 classification work
+
+Three read-only forks (GPAM mechanism, background/resolution, α/β/C/π algebra), then I re-verified
+the numbers that change the plan. Nothing was trained; no GPU; no files edited outside docs.
+
+- **A wrong number in the Established Facts table was corrected.** `T024:108-111` and
+  `patch-pipeline-survey.md:196` said α 0.49%, β 0.41%. Recomputed
+  from `head_preds_5k.npz` against `Attack_traces/labels`: **α 100.00%, β 5.84%, C 0.69%, π 67.03%**.
+  The 0.49% / 0.41% figures were never reproduced; a wrong label column is the likely cause (not
+  located). `MultiResNet/evaluate.py` states in its docstring that it reports head accuracies but
+  contains no such code. **Both files were corrected the same day** on the user's instruction;
+  `roadmap-break-ascad.md:211` never had the α/β figures.
+- **Consequence of the correction:** "rank 0 while α is at chance" was never a puzzle, because α is
+  solved and β is only weakly read. The real puzzle moved to C: its heads are *below* uniform
+  (−0.09 nats) while remaining the structural carrier of the key signal (R7).
+- **Phase 1's NO-GO is narrower than it was written.** It excludes variance-ranked selection plus
+  clustering; it does not test clustering the oracle bands, nor higher-order band finders, nor a
+  bit-wise target. Phase 1R is the cheapest way to settle that, and R2 is a hard stop gate.
+- **Not verified by me (fork-reported):** the GPAM learning-order numbers, the SNR(π) provenance and
+  floors, the 94.5% amplitude split, the true-β substitution result, the TimesNet front-end reading.
+  They are tagged F in the plan.
+- **GPU:** none used or requested. Nothing was run on the R-battery yet; it needs a go-ahead.
 
 ### 2026-10-03 — `rank()` tie convention fixed repo-wide: ties now count AGAINST us
 
@@ -457,14 +615,23 @@ spread **exactly 0.000**. Any rank reported here must therefore carry a flatness
 | Step 2.1: Pseudo multi-task train | H | M | M | **BLOCKED**: needs pseudo-α/β that Phase 1 showed are not obtainable label-free by this method |
 | Step 2.2: Key recovery eval | H | H | H | Blocked behind 2.1. Keep the AOD-GE + shuffled-trace + tie/flatness controls — Phase 0 proved rank 0 is claimable with zero information |
 | Step 3.1: WPP23 collision (fallback) | M | L | L | **NOT EXECUTABLE AS WRITTEN**: "validate with shuffle OFF" has no ASCADv2 dataset (crop and raw are both shuffled). Redesign the validation target first |
-| Decide: is a non-worst-case v2 break still the goal? | H | H | M | Phase 1's measured blocker says the cheap paths are closed; collision is a large build with a 120× shuffle penalty |
+| Decide: is a non-worst-case v2 break still the goal? | H | H | M | **Superseded by Phase 1R:** the cheap paths are not yet closed; R2 decides in hours of CPU. Collision stays a large build with a 120× shuffle penalty |
+| **R1** α/β leakage model (ORACLE): bits vs HW vs one-hot | H | H | H | CPU, minutes. Fixes the design of R2 |
+| **R2** Oracle-band clustering gate (per-bit agreement + NMI vs null) | H | H | M | **Decisive stop gate.** PASS ≥ 10% exact pseudo-α (~0.75/bit); STOP < 0.55/bit |
+| R3 Label-free band finders beyond variance (kurtosis, bimodality) | H | M | M | Only if R2 passes; PASS = ≥ 5× enrichment and ≥ half the oracle-band clustering |
+| R4 Adjacent-difference / per-trace / PCA-removal ablation in the supervised probe | H | M | H | CPU; tests "α lives in fine structure"; falsifier is the difference also collapsing |
+| R5 Variance budget by source + natural clock-jitter test | M | M | M | Decomposes the unmeasured ~98% of variance |
+| R6 Decoders on cached heads (π Hungarian, joint α,β) | M | L | H | Raises the **worst-case** bar only; zero GPU |
+| R7 Re-verify true-β-swap anomaly; reconcile C below uniform vs "C is the carrier" | H | M | H | Before any pseudo-C training is designed |
+| ~~Fix the wrong α 0.49% / β 0.41% in `T024:108-111` and `patch-pipeline-survey.md:196`~~ | M | M | H | **DONE 2026-10-04.** `roadmap-break-ascad.md:211` had no α/β figure |
 
 ### Priority snapshot
 
-- **Do now:** nothing on GPU — Phase 1 closed as NO-GO and Phase 2 is blocked by it. Decide
-  whether to redesign the collision fallback or stop.
-- **Before next meeting:** report the tie-artifact hazard in `rank()` to whoever quotes v2 rank 0.
-- **Deep work (park):** Steps 3.1–3.2 (collision); α/β discovery by a criterion other than spread.
+- **Do now:** R1 → R2 (CPU only, no GPU). R2 is the go/stop gate for the whole pseudo-label route.
+- **Before next meeting:** report the tie-artifact hazard in `rank()` to whoever quotes v2 rank 0;
+  (wrong α/β head accuracies already corrected in T024 and the patch-pipeline survey).
+- **Deep work (park):** Tier-1 G1–G3 (GPU, ask first, ≤ 2 h); Steps 3.1–3.2 (collision) — Step
+  3.1 still needs a redesigned validation target.
 
 ## Related
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress`
+`paused` — baselines + rank JSON done; the side-by-side table vs TimesNet/GNN is tracked in T-005 (2026-10-04 cleanup)
 
 ## Goal
 

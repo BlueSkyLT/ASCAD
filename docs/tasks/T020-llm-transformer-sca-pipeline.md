@@ -2,7 +2,7 @@
 
 ## Status
 
-`active`
+`paused` — focus moved to T-028. Last state: α readable from 16 SNR bands (oracle band choice); open problem is finding bands without labels (2026-10-04 cleanup)
 
 ## Goal
 

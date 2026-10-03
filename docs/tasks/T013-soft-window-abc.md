@@ -2,7 +2,12 @@
 
 ## Status
 
-`planned`
+`cancelled` — the v2 multi-window route is dead on the public 15k crop (2026-10-04 cleanup).
+S0 (synthetic moving centres) never ran, but the sibling 3-window 3O localizer (formerly the
+unregistered `T015-ascadv2-3o-localizer.md`, merged below) ran its physics gate and three loss
+variants on byte 4 in 2026-09-07/08: every label-free variant failed and only the mask-label
+(worst-case) loss localized. SNR(C) = 0.016 means the third window has nothing to find where the
+design expects it. Revive only with a new reason to think C is findable.
 
 ## Goal
 
@@ -37,6 +42,29 @@ Validate whether a **per-trace proposer** \(h_\psi(X)\) can place three Gaussian
 - 2026-08-18: User asked to use \((r-\bar r)(C-\bar C)=0\) as the v1 loss. That is the T-014 analogue of \(\mathcal{L}_{\mathrm{ind}}\), not a new GF identity. v1 default \(\lambda_{\mathrm{ind}}=1\); still not allowed as the sole term.
 
 ## Working notes / session log
+
+### 2026-10-04 — merged the 3-window 3O localizer; task cancelled
+
+The stray `docs/tasks/T015-ascadv2-3o-localizer.md` collided with T-015 (topic notes) and was
+never in INDEX (roadmap gap 8). It was the closest relative of this task (three windows α, β, C
+on v2), so its record is kept here; the old file is now a stub (original text in commit `2edf8f9`).
+
+- **Built (2026-08-26):** `leakage_localizer/affine_moments.py` (`m3_table`, uses
+  `ASCAD_generate.multGF256`; `m3[32] ≈ 0.031373`), `ThreeOrderWindows` in
+  `leakage_localizer/model.py`, `loss_3o` / `loss_head` in `leakage_localizer/losses.py`,
+  `leakage_localizer/data_v2.py`. v1 `loss_2o` / `TwoOrderWindows` untouched (T-014).
+  Plan: `docs/superpowers/plans/2026-08-21-ascadv2-3o-localizer.md`.
+- **Ran (2026-09-07/08, byte 4, 20k prof / 5k attack, T = 15k)** — verdicts read from the JSONs:
+
+  | Run | Artifact (`docs/lab-log/`) | Verdict |
+  |---|---|---|
+  | Oracle gate, frozen windows | `oracle-3o-calibrated.json`, `oracle-pairwise-calibrated.json`, `oracle-3o-controls.json` | FAIL: prod-vs-m3 corr 0.0009 (z 0.12); SNR(α) 2.0, SNR(β) 1.5, **SNR(C) 0.016** |
+  | Loss 1 (3O correlation): fair / synthetic / aux-HW / fair-s1 | `exp3o-{fair-smoke,B-synthetic-10e,C-auxhw-10e,D-fair-s1-10e}.json` | FAIL_FLAT |
+  | Loss 2 (head CE, no mask labels) | `exp3o-F-loss2-10e.json` | FAIL_CHANCE |
+  | Loss 2 + known π (probe only) | `exp3o-G-loss2-knownpi-10e.json` | FAIL_CHANCE |
+  | Loss 3 (GF share CE, **uses mask labels** ⇒ worst-case) | `exp3o-H-loss3-10e.json` | PASS_LOCALIZE (acc_a ≈ 0.06, b/c ≈ 0.003) — not a break |
+
+- Source for the verdict line: `docs/roadmap-break-ascad.md` (3-window 3O localizer subtree).
 
 ### 2026-08-18 — plans rewritten
 
@@ -76,14 +104,14 @@ Validate whether a **per-trace proposer** \(h_\psi(X)\) can place three Gaussian
 
 | Action | I | U | S | Notes |
 |--------|---|---|---|-------|
-| S0 synthetic with **moving** planted centres | H | L | M | No HDF5; no long GPU |
-| S1 real 15k smoke | H | L | L | Ask before run |
+| ~~S0 synthetic with moving planted centres~~ | — | — | — | Cancelled 2026-10-04 with the task |
+| ~~S1 real 15k smoke~~ | — | — | — | Cancelled; the 3O sibling's gate already failed on C |
 
 ### Priority snapshot
 
-- **Do now:** S0 when T-014 is not occupying the same hands
-- **Before next meeting:** S0 result (windows move on synthetic) if they want a demo
-- **Deep work (park):** S1–S3
+- **Do now:** nothing (cancelled)
+- **Before next meeting:** if asked, cite the 3O table above, not S0
+- **Deep work (park):** revive only with evidence that C is localizable label-free
 
 ## Related
 

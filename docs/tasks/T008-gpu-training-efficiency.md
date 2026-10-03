@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress`
+`paused` — config table done; remaining items are optional throughput tuning (2026-10-04 cleanup)
 
 ## Goal
 

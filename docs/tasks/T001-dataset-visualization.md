@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress`
+`paused` — no updates since 09-25; resume when a figure or segment stat is needed (2026-10-04 cleanup)
 
 ## Goal
 

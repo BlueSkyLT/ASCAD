@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress`
+`paused` — claimed recipe stands; remaining items (persist 2O rank JSON, crop-prior ablation, Scoop sweep) need GPU go-ahead (2026-10-04 cleanup)
 
 **Snapshot (2O / order / desync100):** Claimed model is **no-band + order** \(\mu_r<\mu_C\) (not r/C bands). Key byte 2 abs rank 0 on desync0 and desync100 (3/3 seeds). \(C\) windows stay **wide**. Loss walk-through (batch Pearson, regularizers): plan §8. Experiment table: plan §11.
 

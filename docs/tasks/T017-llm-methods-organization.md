@@ -2,7 +2,7 @@
 
 ## Status
 
-`active`
+`paused` — no updates since 09-23; LLM-family results are summarised in T-020's `docs/notes/patch-pipeline-survey.md`. Roadmap gap 10: some Phase-1 checkmarks cite files that do not exist (2026-10-04 cleanup)
 
 ## Goal
 

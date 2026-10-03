@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress` — Phase 2 **full runs done** for bytes **0–4** (seed 0). No GE→0.
+`done` — bytes 0–4 complete (seed 0), no GE→0; bytes 5–15 / extra seeds are optional backlog (ask before GPU) (2026-10-04 cleanup)
 
 ## Goal
 

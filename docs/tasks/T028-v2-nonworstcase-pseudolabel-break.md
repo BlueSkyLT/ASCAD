@@ -2,7 +2,7 @@
 
 ## Status
 
-`blocked` — Phase 0 done (baseline verified, rank-tie hazard found); Phase 1 executed and
+`active` — **current focus (set 2026-10-04).** Open item is the go/stop decision below; Phase 0 done (baseline verified, rank-tie hazard found); Phase 1 executed and
 closed NO-GO with a measured cause (α owns only 1.3× the trace variance of a random 255-way
 split); Phase 2 depends on pseudo-labels Phase 1 showed are unobtainable by variance/PCA
 methods; the Step 3.1 fallback is not executable as written. Awaiting a decision — see the

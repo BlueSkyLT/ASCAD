@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress`
+`done` — superseded. ASCADv2 attack work continues in T-019 (GPAM), T-024 (MultiResNet all-16 rank 0) and T-028 (non-worst-case). TimesNet multilabel here ended at ~random ranks (2026-10-04 cleanup)
 
 ## Goal
 

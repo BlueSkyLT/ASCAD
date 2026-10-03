@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress` — **compression stage COMPLETE and verified** (2026-09-26 23:02); next is the
+`blocked` — Gate 1 full-coverage first-order scan DONE 2026-09-29: Outcome E, no first-order leakage (max|t| 6.30 vs 6.44 threshold, = noise expectation). Waiting on collaborator: what one 4.5M-sample trace covers, whether OPc=f(K), what `auth` is (todo C9/C11). If it is one AES op, next is the second-order scan (C12) (2026-10-04 cleanup)
 full-coverage first-order scan.
 
 ### Build result (final)

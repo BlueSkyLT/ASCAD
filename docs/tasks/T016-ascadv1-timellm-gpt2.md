@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress`
+`done` — negative result: the 40-epoch reprogram run stayed at chance. Family survey and follow-up live in T-020 (`docs/notes/patch-pipeline-survey.md`) (2026-10-04 cleanup)
 
 ## Goal
 

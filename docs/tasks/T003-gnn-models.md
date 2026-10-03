@@ -2,7 +2,7 @@
 
 ## Status
 
-`active`
+`paused` — no updates since 07-24; sample-node GNN frozen, segment-node Plan B awaits a meeting decision (2026-10-04 cleanup)
 
 ## Goal
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress`
+`paused` — catalog is complete for cited runs; remaining items are optional GPU runs (ask first) (2026-10-04 cleanup)
 
 ## Goal
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-`active`
+`done` — `visualize/segment_value_map.ipynb` answers the question; opcode alignment and patch-name probe are optional backlog (2026-10-04 cleanup)
 
 ## Goal
 

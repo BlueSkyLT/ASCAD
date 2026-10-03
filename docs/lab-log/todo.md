@@ -25,13 +25,14 @@ _Update when the open table changes or before a meeting._
 
 | Bucket | Items (ids or short text) |
 |--------|---------------------------|
-| **Do now** | **DONE 2026-09-28** - why the full raw GPAM run sat at exactly chance for 33 epochs: the learning rate (label streaming proven correct (0 mismatches on 40,000 ground-truth rows); lr 5e-5 cannot even memorise 512 traces. Relaunch 2026-09-29 21:23: **the 40k probe PASSED - `rm` 98.34% on held-out shard-2 raw traces** after 5 dead epochs then a sharp phase transition at epoch 6. 34-head campaign now running at lr 1e-3 (NOT 3e-3, which degraded val), ~83 h. Watch for its transition near epoch 6; at epoch 10 run a Table 11 Acc|MeanRank|MaxRank check on the checkpoint |
+| **Do now** | **T-028 (active focus):** decide go/stop on the non-worst-case v2 break — Phase 1 closed NO-GO (label-free α unobtainable by variance/PCA), Phase 2 blocked, the Step 3.1 collision fallback needs a redesigned validation target. T32: tell any session quoting v2 ranks that `rank()` now defaults to worst-among-ties |
+| **T-019 GPAM (other agent — left untouched in the 2026-10-04 cleanup)** | **DONE 2026-09-28** - why the full raw GPAM run sat at exactly chance for 33 epochs: the learning rate (label streaming proven correct (0 mismatches on 40,000 ground-truth rows); lr 5e-5 cannot even memorise 512 traces. Relaunch 2026-09-29 21:23: **the 40k probe PASSED - `rm` 98.34% on held-out shard-2 raw traces** after 5 dead epochs then a sharp phase transition at epoch 6. 34-head campaign now running at lr 1e-3 (NOT 3e-3, which degraded val), ~83 h. Watch for its transition near epoch 6; at epoch 10 run a Table 11 Acc|MeanRank|MaxRank check on the checkpoint |
 | **Before next meeting** | GPAM Table 11 benchmark run on raw data (blocked on the diagnosis above, not on data); T19 persist 2O rank JSON; T28 scoop sweep |
-| **Deep work (park)** | T19 persist 2O JSON; T15–T17; T22 patch-name probe; T29 crop-prior ablation |
-| **T-027 c3 (standalone)** | Gate 1 first-order scan **running** on CPU, ETA ~23:5x (J=94, uint8 cube). Cube + split + Gate 0 all done and verified. **Gate 4 c3 training is GPU-blocked until the 34-head campaign finishes (~83 h from 21:23) unless a crop at steps≤256 fits the ~2.2 GB spare** — that is the one thing worth checking before idling |
+| **Deep work (park)** | T19 persist 2O JSON; T16–T17; T22 patch-name probe; T29 crop-prior ablation; T30–T31 (T-020 paused) |
+| **T-027 c3 (standalone)** | **Blocked on the collaborator.** Gate 1 full first-order scan DONE 2026-09-29 (Outcome E, no first-order leakage). Ask C9/C11 first: what one 4.5M-sample trace covers, OPc=f(K)?, what `auth` is. Only then C12 (second-order scan) |
 
 **Next meeting focus:** GPAM full raw reproduction results; ASCADv2 multi-task attack
-**Last triage:** 2026-09-26 22:20. Phase 0 download **complete and closed out** (D1): 8/8 shards at 93.14 GiB, hourly monitor retired. Full raw GPAM run found dead at epoch 33/150 since 2026-09-25 20:56, every head at chance.
+**Last triage:** 2026-10-04 (task-registry cleanup: T-028 active; T-009/010/011/016/018/024/025 done; T-013 cancelled; 10 tasks paused; T-019 untouched). Previous: 2026-09-26 22:20. Phase 0 download **complete and closed out** (D1): 8/8 shards at 93.14 GiB, hourly monitor retired. Full raw GPAM run found dead at epoch 33/150 since 2026-09-25 20:56, every head at chance.
 
 ---
 
@@ -77,12 +78,10 @@ _Update when the open table changes or before a meeting._
 | T12 | Habit: append `progress.md` after meaningful sessions | M | L | H | T-007 | — | Ongoing |
 | T13 | STM32_AES_v2: TimesNet multi eval done (ranks ~random); decide next experiment | H | L | M | T-009 | — | catalog in T-004; v2 success is black-box pooled byte 4, not multilabel |
 | T14 | Scoop ASCADv2 finetune-only other-15 byte sweep (exclude byte 4): finish runs and publish success/failure report | H | L | M | T-010 | — | Superseded: repro-v2 all-16 report exists; only byte 15 hit `ge_last` 0, not a strict break |
-| T15 | Soft-window α/β/C S0: proposer follows **moving** planted centres | H | L | M | T-013 | — | Plan rewritten 2026-08-18; no GPU until S0 |
 | T16 | Official CE POI-searcher that localizes without HW/SNR in the loss | H | L | L | T-014 | — | 2O already rank-0 on desync0/100; CE path still flat |
 | T17 | 3-seed the **banded** 2O localizer (ablation only) | L | L | H | T-014 | — | Claimed spec is no-band+order; banded is not the model |
 | T18 | Match the five ASCADv1 crop spans to AVR opcodes in secAES-ATmega8515 | M | L | L | T-018 | — | Value map is done; opcodes are not in the HDF5 |
 | T19 | Persist the 2O localizer rank table (re-run seeds 0,1,2 + restarts 3, both desyncs) so the headline v1 claim has a JSON | H | M | M | T-014 | after 2026-09-24 | Roadmap gap 1. Real, but do not take tonight's GPU from brief A. Note: `exp-v1-a2-two-order-baseline.json` has **no** rank/restarts/batch/seed key, so gap 2's "needs restarts=3 + batch 256" is prose inference, not recorded data |
-| T20 | Retire/renumber the stale unregistered `T015-ascadv2-3o-localizer.md` (id collides with topic-notes T-015) | M | M | H | T-022 | — | Roadmap gap 8 |
 | T21 | Add the 2026 "Is it Really Broken?" critique to `Scoop/Analyzing Scoop's ASCADv2 Attack.md` | H | M | H | T-010 | — | Roadmap gap 9: doc states the break as verified fact |
 | T22 | Patch-name SimMIM probe on the v1 crop: 5-way head, must beat the 81.6% "no name" base rate per class | M | L | M | T-018 | — | Designed in `out/B-segment-meanings.md`, not run. Needs GPU — after 14:00 |
 | T25 | Reconcile SNR(\(S\)): "≈0.02" is computed but unsaved (`exp_2o.py:347-348`) while `docs/lab-log/snr-peak-stability-desync0.json` reports `snr_max` 0.00613 / mean 0.00496 from `utils/snr.py:190` | M | L | M | T-014 | — | Roadmap gap 3. Different provenance; do not print either figure until one is named |
@@ -100,6 +99,8 @@ _Update when the open table changes or before a meeting._
 
 | Date | Action | Task |
 |------|--------|------|
+| 2026-10-04 | T20: stray `T015-ascadv2-3o-localizer.md` retired to a stub and merged into T-013 (roadmap gap 8) | T-022 |
+| 2026-10-04 | T15 cancelled with T-013: the 3O sibling's oracle gate failed on SNR(C)=0.016 and every label-free loss failed | T-013 |
 | 2026-09-22 | Restored NVIDIA driver after kernel 7.0.0-30: DKMS install `nvidia/580.142` + `modprobe`; `nvidia-smi` and `py10` `torch.cuda` OK | T-021 |
 | 2026-09-24 | Brief D delivered and **merged** into `docs/2026-09-23/out/D-paper-gap.md`: verdict **2 — Not yet**; six prior-art papers verified with DOIs; six citation errors in the repo note corrected (T23 below); v1 playback control run (T24 below) | T-014 |
 | 2026-09-24 | T23 Prior-art note citation pass → **§7 of `docs/notes/ASCADv1-leakage-localization-prior-art.md`**. **AutoPOI added, and it is the closest localization neighbor** (Remmerswaal/Wu/Tiran/Mentens, JCEng 2023, ePrint 2023/008, DOI 10.1007/s13389-023-00328-y — PPO over feature regions, reward = template attack; datasets ASCAD_F/ASCAD_R/AES_HD/CHES_CTF via proxy; no second-order sentence). **MS23 settled after three readings tonight**: not a phantom, and not a *learned* localizer either — it is the **ASCADv2 paper** (Masure & Strullu, JCEng 13(2):129–147, 2023; preprint ePrint 2021/592) whose official extracted set **is** two windows, W1 `[205k,210k)` ‖ W2 `[455k,465k)` = 15k, but **frozen offline by code analysis + SNR**, with mask labels in training (worst-case). The intermediate "it has a learned region head" reading came from trusting an OpenAlex abstract **reconstruction** — do not cite rebuilt abstracts. Also: Cao B-CNN confirmed IEEE TIFS 2022 DOI 10.1109/TIFS.2022.3216959; RPOI/OPOI row = Perin/Wu/Picek TCHES 2022(4); 700-crop cite = ePrint 2018/053 / JCEng 2020 10(2):163–188 **not** "Maghrebi et al."; arXiv:2410.22425 is **synthetic-only** and "AdvMask" is our shorthand; the note's "\(W_1\|W_2\) from MS23" steal-list item re-attributed | T-014 |

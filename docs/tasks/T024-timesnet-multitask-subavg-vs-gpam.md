@@ -2,7 +2,7 @@
 
 ## Status
 
-`planned`
+`done` — MultiResNet 34-head + sub_avg baseline recovered all 16 bytes at rank 0 (z +3.89…+6.86σ; re-verified genuine in T-028 Phase 0). The TimesNet multi-task half never ran and is parked as backlog (2026-10-04 cleanup)
 
 ## Goal
 

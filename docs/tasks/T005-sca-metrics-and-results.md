@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress`
+`paused` — metrics doc done; the fair cross-model comparison table (also T-006's next step) is owned here (2026-10-04 cleanup)
 
 ## Goal
 

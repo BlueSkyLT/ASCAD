@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress`
+`paused` — survey doc exists; coverage gaps remain, no updates since 08-19 (2026-10-04 cleanup)
 
 ## Goal
 

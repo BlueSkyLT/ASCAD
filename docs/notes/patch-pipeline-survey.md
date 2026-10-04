@@ -27,11 +27,10 @@ chance 6.25 %.
 1. **Roughly 40 distinct patch/attention configurations were built and ~30 recorded runs
    exist. Not one produced a key rank of 0 by learned means on either dataset.** 46 files in
    the repo contain the string `FAIL_CHANCE`.
-2. **Explicit averaging is fatal — but that is not what our patch models did, and it is not why
-   they failed.** Holding the *same* 1,600 samples fixed: raw 0.8603 → mean-of-2 **0.0083** top-1
-   on α. GPAM groups samples into blocks 10–25× wider than our patches and still reaches 98.34 %,
-   so grouping is not the problem. The likelier cause is that every patch run on a readable label
-   was early-stopped at 6–7 epochs, and GPAM's own breakthrough came at epoch 6. See §7b, §7c.
+2. **CORRECTED 2026-10-04: explicit averaging is NOT fatal. The "0.0083 collapse" was a pooling bug
+   in `LLM/band_scan.py:85` (`.mean(1)` should be `.mean(2)`), which returned 2/4/8 features instead of
+   800/400/200. Correct pooling gives: raw 0.8603 → mean-of-2 0.8930, mean-of-4 0.9085, mean-of-8 0.9000.
+   Block-mean pooling is benign.** The real blocker for patch models is training protocol (early stopping at 6 epochs while GPAM breaks through at epoch 13), not resolution. See C3 of T028 and §7b, §7c.
 3. **The label is readable, and now on raw data too.** GPAM — grouped attention over
    non-overlapping blocks, no patch-mean — gets `rm`(= α) **92.95 %** held-out on the extracted
    crop (`GPAM/artifacts/C-gpam-eval.json:53`) and **98.340 %** on raw 1 M-sample traces
@@ -207,12 +206,13 @@ same label, same learner — only the representation changes:
 | Representation of the same 1,600 samples | features | top-1 on α | × chance |
 |---|---|---|---|
 | raw, one feature per sample | 1600 | **0.8603** | 219× |
-| mean of adjacent 2 | 800 | **0.0083** | 2.1× |
-| mean of adjacent 4 | 400 | 0.0065 | 1.7× |
-| mean of adjacent 8 | 200 | 0.0090 | 2.3× |
+| **CORRECTED 2026-10-04** mean of adjacent 2 | 800 | **0.8930** | 227× (not 0.0083) |
+| **CORRECTED 2026-10-04** mean of adjacent 4 | 400 | **0.9085** | 231× (not 0.0065) |
+| **CORRECTED 2026-10-04** mean of adjacent 8 | 200 | **0.9000** | 229× (not 0.0090) |
 
-> "Averaging two adjacent samples destroys 99 % of what the model had extracted."
-> — `A-followup-where-alpha-leaks.md:89`
+> **RETRACTED 2026-10-04:** "Averaging two adjacent samples destroys 99 % of what the model had extracted."
+> The 0.0083 values came from pooling bug in `LLM/band_scan.py:85`. Correct pooling shows block-mean is benign.
+> — (previous source `A-followup-where-alpha-leaks.md:89` now superseded by `T028:C3`)
 
 A patch **is** a group of adjacent samples that gets projected jointly, and mean-pooling over
 patches averages again. `A-followup:91-94` draws the conclusion: any front end whose first move
@@ -251,13 +251,12 @@ So the RESOL result and the GPAM result are in tension, and the honest reading i
 
 | front end | outcome |
 |---|---|
-| explicit mean over adjacent samples (RESOL b2/b4/b8) | fatal — 0.86 → 0.008 |
+| **CORRECTED 2026-10-04** explicit mean over adjacent samples (RESOL b2/b4/b8) | **benign** — 0.86 → 0.893/0.909/0.900 (pooling bug fixed) |
 | group samples into blocks, project, attend (GPAM, 150–400/token) | **works** — 92.95 % crop, 98.34 % raw |
 | group into 16-sample patches, project, attend, linear head (our models) | fails — at chance |
 
-Grouping is therefore **not** the discriminator; averaging is. The remaining candidates, in
-order of how much weight the evidence gives them, are **training length**, token count, head
-depth, and multi-scale readout — see §7c.
+**RETRACTED 2026-10-04:** "Grouping is not the discriminator; averaging is." The 0.008 collapse came from a pooling bug in `LLM/band_scan.py:85`, not from averaging per se. Correct averaging is benign. The real obstacle for patch models is **training protocol** (early stopping at epoch 6, while GPAM breaks through at epoch 13), not resolution.
+See T028:C3 for full details.
 
 ## 7c. The patch family was stopped at the epoch GPAM needed to work
 

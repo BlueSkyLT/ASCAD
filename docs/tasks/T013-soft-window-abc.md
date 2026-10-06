@@ -62,7 +62,7 @@ on v2), so its record is kept here; the old file is now a stub (original text in
   | Loss 1 (3O correlation): fair / synthetic / aux-HW / fair-s1 | `exp3o-{fair-smoke,B-synthetic-10e,C-auxhw-10e,D-fair-s1-10e}.json` | FAIL_FLAT |
   | Loss 2 (head CE, no mask labels) | `exp3o-F-loss2-10e.json` | FAIL_CHANCE |
   | Loss 2 + known π (probe only) | `exp3o-G-loss2-knownpi-10e.json` | FAIL_CHANCE |
-  | Loss 3 (GF share CE, **uses mask labels** ⇒ worst-case) | `exp3o-H-loss3-10e.json` | PASS_LOCALIZE (acc_a ≈ 0.06, b/c ≈ 0.003) — not a break |
+  | Loss 3 (GF share CE, **uses mask labels** ⇒ worst-case) | `exp3o-H-loss3-10e.json` | **FAIL_WORST_CASE** (acc_a ≈ 0.06, b/c ≈ 0.003 = below chance; windows not learned even with ground-truth labels) |
 
 - Source for the verdict line: `docs/roadmap-break-ascad.md` (3-window 3O localizer subtree).
 

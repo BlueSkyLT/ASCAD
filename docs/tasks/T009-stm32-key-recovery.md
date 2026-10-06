@@ -63,11 +63,11 @@ recombine:
 | `masks[18]` | α multiplicative mask |
 | rest of 38 | not used by this attack path |
 
-**Oracle smoke (N=64 attack traces):**
+**Oracle smoke (N=64 attack traces, plausibility check only, NOT a statistical result):**
 
 - Label recompute from metadata: **0 mismatches**
 - Oracle one-hot → recombine: **100% top-1** on true Sbox for both with-permind and without-permind
-- Oracle ranks: **rank 0** from 1st step for bytes 0/2/15
+- Oracle ranks on smoke subset: bytes 0/2/15 show rank 0 on N=64 traces; **not statistically significant** (no z-score test, no shuffled-trace control, and small N can produce accidental ties in log-likelihood). This is a sanity check only, not a claimed result.
 - `MultiResNet(depth=19, L=15000)`: **~137M** params (with permind) / **~78M** (without); **34** / **18** heads
 
 ## Working notes / session log
@@ -91,7 +91,7 @@ recombine:
 
 - Wall ~**4.2 h** total (`elapsed_sec=14982`); multi ~2.1 h, ASCAD-head multi ~2.1 h; no NaN; full 30 epochs.
 - Train CE (mean multilabel): multi **5.551→5.462** train / **5.462** best val; head **5.546→5.453** / **5.458** best val. Random ≈5.545 — real but small drop.
-- Ranks @1000 attack traces (mean over 16 bytes): multi **129.6** (min 18, max 236; one byte ttr0@230); head **126.4** (min 32, max 247). Still ≈ random; slight improvement vs first run (~141 / ~133).
+- Ranks @1000 attack traces (mean over 16 bytes, corrected from e60 JSON): multi **124.3** (min 18, max 246; no bytes with ttr0); head **137.2** (min 12, max 253; no bytes with ttr0). Still ≈ random. [Previous prose "129.6" / "126.4" / "ttr0@230" conflicted with stored JSON; JSON is authoritative.]
 - Summary: `STM32_AES_v2/ASCAD_data/ASCAD_trained_models/summary_full_fixedkey_gpu.json`
 
 ### 2026-07-18 — improved retrain launched

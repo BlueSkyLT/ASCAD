@@ -2,7 +2,7 @@
 
 ## Status
 
-`done` — v2 HPO sweep finished on all 16 bytes; only byte 15 reached GE 0 (at 100,001 traces), not a strict break. Report: `byte_sweep/BYTE_SWEEP_REPORT.md` (2026-10-04 cleanup)
+`done` — v2 HPO sweep finished on all 16 bytes; only byte 15 reached GE 0 (at 100,001 traces). **Caveat: single seed (seed 0), single HPO trial (best of 14); multi-seed validation and shuffled-trace control pending before claiming a strict break.** Report: `byte_sweep/BYTE_SWEEP_REPORT.md` (2026-10-04 cleanup)
 
 ## Goal
 

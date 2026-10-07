@@ -504,29 +504,27 @@ is the obstacle; if neither learns, it is the protocol/architecture. This replac
 3. **Park R11/R12 label-free discovery:** Do not run without a pre-registered PASS bar. R10 with oracle labels still needs 100k+ traces as a necessary condition; label-free will be weaker. Decision: after oracle swaps on TimesNet are read, decide whether to fix π (18% vs 67%) or stop the TimesNet line.
    - **RESOLVED 2026-10-08 by the swap battery: stop the TimesNet line for v2 rather than fix its π, and R11 stays parked.** Oracle π buys **+0.18 z** on TimesNet (and +1.67 z on the baseline, which S2 already knew), so π cannot be what rescues it; C is, and C's defect is a carrier failure no mask-free route can label. R12 is not closed by this measurement (it asks whether the slot read can be made with more samples, which the swaps do not address) and stays parked behind a pre-registered PASS bar, per this item.
 
-#### C5. New direction: Contrastive Learning for C (registered 2026-10-08)
+#### C5. Contrastive Learning Investigation (CL-0 CPU Check, Falsified 2026-10-08)
 
-**Why:** C4 showed TimesNet *can* use C (oracle lifts it to z +14.21 / 16/16) but *cannot learn* C from labels. MultiResNet learned C; TimesNet did not. This gap is not architectural capacity or data — it is a learning problem. Contrastive learning treats C as a relational property (deterministic function of α, β, plaintext, key) rather than an independent 256-class label. This might unlock either:
-1. **Label-free α** (via contrastive clustering on same-key pairs) — unblocks the full pseudo-label pipeline
-2. **Why C is learnable** (MultiResNet vs TimesNet gap) — explains the blocker
-3. **Better C learning** (hybrid contrastive + CE loss) — improves the working model
+**Original idea (registered C5):** C4 showed TimesNet *cannot learn* C from labels but *can use* oracle C (z −0.1066 → +14.21). Could contrastive learning fix C learning via relational structure (C = α ⊗ S(p⊕k) ⊕ β)?
 
-**Plan:** `docs/tasks/T031-contrastive-learning-plan.md` — three staged approaches with gates and a decision tree.
+**CL-0 Premise Check (CPU, ~1 min) — Three Falsifications:**
 
-| Stage | Goal | Duration | Gate | Budget |
-|-------|------|----------|------|--------|
-| **CL-α** | Learn α label-free via contrastive clustering (same key → positive, different keys → negative) | ~30 min GPU | Linear probe ≥50% top-1 on α on 5k attack split | 30 min |
-| **CL-C** (if CL-α passes) | Hybrid loss: λ₁ CE(α/β/π) + λ₂ contrastive(C) on MultiResNet | ~20 min GPU | C-head accuracy +1.5 pp vs standard CE | 50 min |
-| **CL-Bridge** (parallel, optional) | Dual-trunk contrastive alignment (MultiResNet + TimesNet) to explain C gap | ~45 min GPU | TimesNet z >+0.4 with bridge loss | 95 min |
+1. **CL-α FALSE:** Contrastive clustering on same-key pairs has no positive class. One key per trace (50,000 distinct keys / 50,000 traces), α redrawn per trace. P(αᵢ=αⱼ | same key byte) = 0.0039256 vs exact floor 0.0039439 (−1.2σ on 16M pairs). Random pairs give identical clustering signal. **Equivalence class required for contrastive learning does not exist in this dataset.**
 
-**Consequence:** 
-- **CL-α FAIL:** α is not contrastive-learnable at 50% threshold. Label-free α is stuck on the shuffle null (confirmed by Phase 1 and C4). Close contrastive line; reallocate budget to T31-N4c + R11/R12 or stop.
-- **CL-α PASS, CL-C PASS:** Contrastive C learning is a lever. Deploy hybrid loss (λ₂ ∈ [0.1, 0.5]) on production MultiResNet; measure key recovery lift.
-- **CL-α PASS, CL-Bridge PASS:** TimesNet's C failure is fixable via trunk alignment. Apply bridge loss + contrastive C head to TimesNet; re-test with w=0.5 weighting (but expect no gain, as C's missing carrier is the bottleneck).
+2. **CL-C FALSE:** C's deterministic relation (same plaintext+key → same C) holds in byte space but breaks in label space. The head's *masked* label is uncorrelated with the unmasked S-box: 0.00327 vs floor 0.00391. Slots ≠ bytes across traces: 17,255 distinct permutations in 20k traces; byte 0 in slot 0 only 6.22% (chance 6.25%). **The relation CL-C depends on doesn't exist in the label the model sees.** (CL-C2 variant trains on oracle α/β, breaking T-028's non-worst-case constraint.)
 
-**Total budget:** ~95 min (within T-028's ≤2 h ceiling). If all stages fail, one arm remains: T31-N4c (16 min) to validate w=0.5 adoption, and decision to stop v2 non-worst-case work or pivot to c3 (T-032).
+3. **Deeper finding:** Neither model *learned* C. MultiResNet C: 0.69% top-1, −0.0900 nats. TimesNet C: 0.40% top-1, −0.0729 nats. Both at chance. **C4's z difference (−0.1066 → +14.21 with oracle C) is carriage (routing), not learning — a different question from what the plan posed.** (Report: `docs/tasks/T031-reports/CL-0-premise-check.md`, LEDGER row 8.)
 
-**Status:** PLAN, awaiting user go-ahead on CL-α stage (~30 min GPU).
+**Trapped metric corrected:** MI(α; k₀) looked like 0.7208 nats but permutation null is 0.7205 ± 0.0022 — pure Miller bias at n ≈ 195/group. Now quoted against null.
+
+**Survivor: CL-Bridge (optional diagnostic only)**
+- **Question:** Can trunk representation alignment make TimesNet learn to *use* C in the decode, even if C stays at chance?
+- **Gate (corrected):** Oracle α+β+π with C from model: z ≥ +3.0, ≥8/16 rank-0 (vs original "z >+0.4")
+- **Cost:** ~45 min GPU
+- **Status:** Not required. Only if you want a representation-alignment diagnostic after T31-N4c.
+
+**Consequence:** Label-free C discovery is not achievable on ASCADv2 because **C is not learnable** — it's slot-indexed masked S-box, a function of the masks, not an observation. Non-worst-case bottleneck remains α (label-free band finding fails at 2% matched accuracy; necessary condition ≳100k traces per R10).
 
 #### D. Decision tree after Tier-0
 

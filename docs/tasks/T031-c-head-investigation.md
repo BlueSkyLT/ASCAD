@@ -136,16 +136,16 @@ Gates are **pre-registered: they may not move after any number is seen.** Tags a
   - **If N4b clarifies the choice:** Adopt the winning weight as the new baseline. **Then stop — N5 and N6 remain not triggered.** ← **DONE: w=0.5 adopted by the frozen rule; stopped; N5/N6 untouched.**
   - **If N4b remains ambiguous:** Report both and proceed to user judgment call. *(Not this branch, but see report §6: "w=0.5 beats the baseline" is **suggested, not established** — no seeded w=1 replicate exists. One run, ~16 min, and it needs the user's go-ahead.)*
 
-- [ ] (I:H U:M S:H) **T31-CL — Contrastive Learning: Why C is learnable by MultiResNet but not TimesNet.**
-  - **Registered 2026-10-08 after C4 oracle swaps.** Status: PLAN (not executed). Scope: three staged approaches to diagnose and possibly fix C learning via contrastive objectives instead of standard CE.
-  - **Motivation:** C4 showed true C lifts TimesNet from z −0.1066/0/16 to z +14.2108/16/16, proving C is the only binding constraint. Standard training fails to learn C in TimesNet but succeeds in MultiResNet. Contrastive learning could exploit C's relational structure (deterministic function of α, β, plaintext, key) rather than treating it as an independent 256-class label.
-  - **Three approaches:**
-    1. **CL-α:** Learn α label-free via contrastive clustering (positive = same key byte, negative = different keys). Gate: linear probe ≥50% top-1. Cost: ~30 min GPU.
-    2. **CL-C:** Hybrid loss (λ₁ CE(α/β/π) + λ₂ contrastive(C)) on MultiResNet. Gate: C accuracy +1.5 pp over standard CE. Cost: ~20 min GPU (if CL-α passes).
-    3. **CL-Bridge:** Dual-trunk contrastive loss (MultiResNet + TimesNet trunk alignment) to explain why TimesNet fails. Gate: TimesNet z >+0.4 with bridge loss. Cost: ~45 min GPU (parallel, optional).
-  - **Decision tree:** CL-α is the gate. If FAIL (< 50% probe): close contrastive line, accept label-free α stuck on shuffle null, return budget to R11/R12. If PASS: CL-C and CL-Bridge provide diagnostics (is C structure the lever? Is architectural alignment the lever?). Total budget: ~95 min (within T-028's 2 h ceiling).
-  - **Plan document:** `docs/tasks/T031-contrastive-learning-plan.md` (full design, stages, gates, decision tree, checklist)
-  - **Next:** User go-ahead on CL-α stage (~30 min); if approved, launch immediately; if FAIL, reallocate to T31-N4c + R11/R12 + close contrastive line.
+- [N/A] (I:H U:— S:H) **T31-CL — Contrastive Learning investigation (FALSIFIED BY CL-0 CPU PREMISE CHECK).**
+  - **Registered 2026-10-08 after C4 oracle swaps.** **Status: CL-0 premise check (CPU only, ~1 min, 2026-10-08) falsified the plan; CL-α and CL-C not triggered; CL-Bridge remains as optional diagnostic.**
+  - **Original hypothesis:** C4 showed true C lifts TimesNet from z −0.1066/0/16 to z +14.2108/16/16, suggesting C learning is the gap. Contrastive learning could exploit C's relational structure.
+  - **CL-0 findings (CPU check before any GPU):**
+    1. **CL-α premise FALSE:** The dataset has one key per trace (50,000 distinct keys / 50,000 traces). α is redrawn per trace. P(αᵢ=αⱼ | same key byte) = 0.0039256 vs exact floor 0.0039439 (−1.2σ on 16M pairs). **No positive equivalence class exists for contrastive clustering.** Random pairs give the same signal.
+    2. **CL-C premise FALSE:** The relation C = α ⊗ S(p⊕k) ⊕ β holds in byte space (P(same unmasked S) = 1.0) but the head's masked label is uncorrelated with it (0.00327 vs floor 0.00391). Additionally, slots ≠ bytes across traces: 17,255 distinct permutations in 20k traces; byte 0 in slot 0 only 6.22% (chance 6.25%). **The relation CL-C depends on doesn't exist in the label the model sees.**
+    3. **CL-0's deeper finding:** Neither MultiResNet nor TimesNet *learned* C. C-head top-1 0.69% / −0.0900 nats (MultiResNet) and 0.40% / −0.0729 nats (TimesNet) are both at chance. **C4's z difference (−0.1066 → +14.21 with oracle C) is carriage (routing), not learning.** Different question entirely from what the plan posed.
+  - **Report:** `docs/tasks/T031-reports/CL-0-premise-check.md` (measurements, MI(α;k₀) trap avoided, permutation nulls)
+  - **Surviving option:** **CL-Bridge (optional diagnostic only)** — test whether trunk representation alignment can make TimesNet learn to *use* C in the decode, even if C stays at chance. Gate (corrected): oracle α+β+π (C from model) z ≥ +3.0, ≥8/16 rank-0. Cost: ~45 min GPU. **Only if you want a representation-alignment diagnostic; not required.**
+  - **Consequence:** Label-free C discovery (non-worst-case) is not achievable on ASCADv2 because **C is not learnable as a classifier on either model** — it's slot-indexed masked S-box, a function of the masks, not an observation. The non-worst-case bottleneck remains α (label-free band finding fails at 2% matched accuracy; necessary condition ≳100k traces per R10).
 
 - [ ] (I:M U:M S:H) **T31-N4c — Seeded C-loss weight 1.0 baseline replicate (validation of N4b adoption).**
   - **Rationale:** N4b adopted w=0.5 (two-seed mean z +9.984) based on beating the baseline (z +9.5047), but the baseline is one unseeded run. A seeded w=1 run with the same `--seed` protocol as N4b validates whether w=0.5's advantage is stable or within the w=1 noise band. Cost: GPU ~16 min.
@@ -318,6 +318,51 @@ Gate criterion met at w=0.25 (16/16 non-flat rank-0, β **7.74%** ≥ 7.5%), fai
 - **2026-10-08: T31-N4b delivered — the frozen rule fired on its first branch: adopt w=0.5 — and the result inverts T31-N4.** mean z(0.5) − mean z(0.25) = **+2.5363** (threshold 0.5): w=0.5 gives **+10.2582 / +9.7092** (spread 0.549) with median traces-to-rank-0 **145 / 150** (spread 5), while w=0.25 gives **+5.3737 / +9.5211** (spread **4.147**) with **955 / 180** (spread 775). **The gate-passing arm is the unstable one.** N4's head-quality story also falls: β at seed 1 is **7.22%**, under the 7.5% bar the single run cleared. All six C-including runs keep 16/16 non-flat rank-0; N2 (w=0) remains 0/16, so the carrier cliff is where N4 put it. Consequences accepted as written: **(1) w=0.5 is the adopted C loss weight; (2) N5 and N6 remain NOT triggered and nothing further was started (hard rule 4); (3) "w=0.5 beats the baseline" is NOT claimed as established** — the baseline is one unseeded run, so a seeded w=1 replicate (~16 min) is named as the single missing measurement rather than run on inference. Methodological ruling recorded for the programme: **single-run gates on this task are unreliable; `--seed` should be mandatory in every comparison from here on.**
 
 ## Working notes / session log
+
+### 2026-10-08 — CL-0: the contrastive plan was checked before it was run, and two of its three approaches died on the labels
+
+- **What arrived:** a new sibling plan, `docs/tasks/T031-contrastive-learning-plan.md` (three contrastive approaches,
+  ~95 min GPU, staged gates), handed over with "try it". The task-memory discipline says a plan's premises get
+  checked before its compute is spent, so the CPU pre-run came first: `experiments/cl_premise_check.py` →
+  `experiments/out/cl_premise_check.json` (+ `.log`), ~1 min, **no GPU, nothing trained, no checkpoint written**.
+- **The plan's own title premise is false, and it matters more than any stage.** "MultiResNet learned C; TimesNet
+  did not" — neither learned C: top-1 **0.69%** vs chance 0.39% at gain **−0.0900 nats** on MultiResNet, and
+  **0.40% / −0.0729** on TimesNet. C4's finding is a *carriage* difference (+14.0303 z / 16-of-16 vs +0.0766 z /
+  0-of-16 with true α/β/π fed to both). Framing the question as "why is C learnable in one model" would have sent
+  three GPU stages at a question the data does not pose.
+- **CL-α's positive class does not exist.** ASCADv2 here carries **one key per trace** (50,000 distinct full keys
+  in 50,000 profiling traces; 10,000 in 10,000 attack traces), and α is redrawn per trace, so "traces with the same
+  key byte share α" is not merely weak but exactly at chance: P(αᵢ=αⱼ | same key byte 0) = **0.0039256** against the
+  empirical floor **Σp² = 0.0039439** (−1.2σ over 16M sampled pairs); β the same. No temperature, batch rule or
+  encoder repairs an equivalence class that isn't there.
+- **The MI number was a trap and I nearly reported it.** Plug-in MI(α; k₀) = **0.7208 nats** looks like real
+  information, but at n≈195 per group with K=256 the Miller bias alone is ≈(K−1)/2n ≈ 0.65 nats. The identical
+  statistic on permuted keys gives **0.7205 ± 0.0022**, so the excess is **+0.0003 nats (0.15σ)**. Every MI in the
+  report is quoted against its own permutation null: β −0.0014, π-slot0 −0.0004, attack-split α −0.0088 nats.
+- **CL-C's relation is real but lives in the wrong space.** P(same unmasked `S[p⊕k]` | same p₀,k₀) = **1.000** over
+  37,974 ordered pairs — the plan is right that it is deterministic and needs no mask labels. But the C head's label
+  is the *masked* value, and P(same masked value in that byte's slot) = **0.00327** (floor 0.00391), P(same α) =
+  0.00421, P(same β) = 0.00390. Slots are not bytes across traces: **17,255 distinct permutations in 20,000 traces**,
+  byte 0 in slot 0 for **6.22%** of traces (chance 6.25%). And the identifiable target is the one W1 measured as
+  *least* visible (0 significant samples). So the visible leak needs the labels and the label-free relation has no
+  visibility — the same wall from a fourth direction (after W1's SNR, W2's algebra, N1's vacuity).
+- **CL-C2 as written breaks the task's own constraint** ("compute true α/β from the cache") — that is mask-label
+  training, i.e. worst-case, which T-028 forbids for any non-worst-case claim. Flagged rather than silently rerouted.
+- **What survived, with the gate fixed:** **CL-Bridge** is a representation hypothesis and nothing here touches it.
+  But its gate ("TimesNet z ≥ +0.4") grades a decode that is dead because its C head carries nothing. Gate on
+  carriage instead: re-run C4's E3 arm and require **+0.0766 / 0-of-16 → z ≥ +3.0 with ≥8/16 non-flat rank-0**; the
+  harness already costs ~1 min CPU per checkpoint. A **repaired CL-C** is conceivable as a bag-level,
+  permutation-invariant match against the 16 computable unmasked values per trace (no slot assignment needed) — the
+  only contrastive idea in the plan that maps onto an available signal — but it should earn its own CPU visibility
+  check before any GPU, given W1.
+- **Not run, on purpose:** Stage 1 (~30 min), Stage 2 as written (~20 min), Stage 3 (~45 min), the
+  `cl_alpha_dataset.py` loader, and the `ASCAD_train_models.py` `--contrastive-loss` flags. Budget intact: T-028's
+  ≤ 2 h untouched, T31-N4c's ~16 min still queued. Stopped for a ruling — the plan's own mitigation clause ("if
+  CL-α fails, close the line immediately") is satisfied here at ~1 min CPU instead of 30 min GPU.
+- **Files touched:** the plan file (Status header, premise table, checklist annotated),
+  `T031-reports/CL-0-premise-check.md` (new), `T031-reports/LEDGER.md` (row 8 of 8), this file (Working notes, Next
+  actions ×2, Related), `docs/tasks/INDEX.md`, `docs/lab-log/todo.md`. New code:
+  `experiments/cl_premise_check.py`. T-028/T-029/T-030 files untouched by this step.
 
 ### 2026-10-08 — synthesis note, including the N4b correction
 
@@ -583,7 +628,9 @@ Gate criterion met at w=0.25 (16/16 non-flat rank-0, β **7.74%** ≥ 7.5%), fai
 | ~~T31-N4b — replicate the two weights before adopting either~~ (GPU) | H | H | M | **DONE 2026-10-08 — the frozen rule fired on its first branch: adopt w=0.5.** mean z(0.5) − mean z(0.25) = **+2.5363** (threshold 0.5): w=0.5 **+10.2582 / +9.7092** (spread 0.549) at 145/150 median traces→rank-0 (spread 5) vs w=0.25 **+5.3737 / +9.5211** (spread **4.147**) at 955/180 (spread 775). **N4's gate-passing arm was the unstable one**, and its head-quality claim falls too (β 7.22% at seed 1 < the 7.5% bar). 16/16 non-flat rank-0 in all six C-including runs; N2 (w=0) still 0/16. 4 runs, 3296.7 s + 4 evals. **N5/N6 still not triggered; stopped per rule 4.** Report `T031-reports/T31-N4b-c-loss-weight-replication.md` |
 | **Seeded w=1 replicate — the one measurement that would justify "w=0.5 beats the baseline"** (GPU, ~16 min/run; needs go-ahead) | H | M | M | Everything in N4b is compared **between** the two down-weighted arms, paired by seed. The baseline's +9.5047 z / 170 traces is one **unseeded** run, so w=0.5's mean (9.984 / 147.5) is *suggested* better, not shown. One seeded w=1 run makes the comparison like-for-like; a second gives the baseline its own variance, which is also what every future step here will be measured against. Not started — hard rule 4, and the stronger claim is deliberately not made in the report |
 | **Adopt C loss weight 0.5 as the production setting** (user ruling; no compute) | H | H | L | By the frozen rule this is already decided operationally: `--c-loss-weight 0.5` in `MultiResNet/train.py`, 16/16 non-flat rank-0 on both seeds, mean z +9.984, median 147.5 traces. Needs only the user's confirmation that the cascade ends here (N5/N6 stay untriggered) rather than continuing to optimise inside the weight |
-| W4 conditional: π-recovery post-hoc search (not triggered) | M | L | M | **CPU-only.** T-028 A4 shows 12/16 without π (marginalizable). Neither N1 nor N2 triggers it: every legitimate decoder recovers 16/16 or is inert, and N2's better π heads (72.13%) still ride on a C head the model cannot train. Gate unchanged: does post-hoc π recovery unlock bytes that fail otherwise? |
+| **CL-0: contrastive-plan premises checked — Stage 1 not run** | H | H | H | **DONE 2026-10-08 (CPU ~1 min, no GPU).** `docs/tasks/T031-contrastive-learning-plan.md` proposes three contrastive approaches; two are measured false before any training. **(i)** Its title premise ("MultiResNet learned C") is wrong — C head top-1 **0.69%** at **−0.0900 nats** vs TimesNet 0.40% / **−0.0729**; what differs is *carriage* (C4: +14.0303/16-of-16 vs +0.0766/0-of-16). **(ii) CL-α's positive class does not exist:** each profiling trace carries its own key (50,000 distinct), and α is redrawn per trace — P(αᵢ=αⱼ \| same key byte) **0.0039256** vs exact floor **Σp² = 0.0039439**; MI 0.7208 nats is estimator bias (own permutation null 0.7205 ± 0.0022). **(iii) CL-C's relation is real only in byte space** (P(same unmasked c \| same p,k) = 1.000 over 37,974 pairs) while the head's masked label is uncorrelated with it (P = 0.00327 vs floor 0.00391) and slots are not bytes across traces (byte 0 in slot 0: 6.22% vs chance 6.25%). **(iv) CL-C2 as written uses oracle α/β**, which violates T-028's non-worst-case constraint. **Survives: CL-Bridge** (representation hypothesis) with its gate replaced by the C4 carriage arm E3 (+0.0766/0-of-16 → z ≥ +3.0, ≥8/16), and a possible **bag-level permutation-invariant CL-C** that needs its own CPU visibility check. Report `T031-reports/CL-0-premise-check.md`; code `experiments/cl_premise_check.py` |
+| **Ruling requested: how to spend the remaining GPU** (each arm timed; none started) | H | H | L | Three candidates, all needing a go-ahead because every one is a training run: **(a) T31-N4c** — seeded w=1 MultiResNet reference, ~16 min, the only thing that converts "w=0.5 is the best C-including weight tested" into "w=0.5 beats the baseline"; **(b) CL-Bridge** — ~45 min, the one contrastive arm whose premise survived, gated on carriage rather than z; **(c) TimesNet `--c-loss-weight 0.5`** — ~16 min × 2 seeds, licensed by the letter of T-028 §C4's branch but argued against by measurement (an oracle swap tests the other heads; down-weighting C moves β/π, never makes C readable). Budget note: T-028's ceiling is ≤ 2 h total across all phases and it is currently untouched; (a)+(b) = ~61 min |
+| W4 conditional: π-recovery post-hoc search (not triggered) | M | L | M | **CPU-only.** T-028 A4 shows 12/16 without π (marginalizable). Neither N1 nor N2 triggers it: every legitimate decoder recovers 16/16 or is inert, and N2's better π heads (72.13%) still ride on a C head the model cannot train. Gate unchanged: does post-hoc π recovery unlock bytes that fail otherwise? **Reinforced 2026-10-08 by T-028 C4 item 1: oracle π is worth +1.67 z on the baseline and +0.18 z on TimesNet, so π is not the binding constraint in either model** |
 
 ### Priority snapshot
 
@@ -596,6 +643,7 @@ Gate criterion met at w=0.25 (16/16 non-flat rank-0, β **7.74%** ≥ 7.5%), fai
 ## Related
 
 - Task ids: T-030 (closed), T-028, T-024, T-019
+- Sibling plan: `docs/tasks/T031-contrastive-learning-plan.md` (2026-10-08, three contrastive approaches) — **checked, not executed**, see `T031-reports/CL-0-premise-check.md`; **CL-Bridge (Stage 3) remains live** with a corrected carriage gate
 - `docs/lab-log/todo.md` items: **T31-N4b** (DONE 2026-10-08 — adopt w=0.5), **seeded w=1 replicate** (the one missing measurement, needs go-ahead), **T31-N5/N6** (SOTA #2/#3, **not triggered** — the cascade stopped at the first pass; N5's plan block also needs rewriting before it could run), **T31-W4** (π, not triggered), **T31-C1** (housekeeping: dead triplicate definitions in `experiments/w2_decoders.py`, a T-030 artifact)
-- Reports: `docs/tasks/T031-reports/` — `W1-c-diagnosis.md`, `W2-c-lut-replacement.md`, `T31-N1-joint-alpha-beta-decode.md`, `T31-N2-c-deletion-retrain.md`, `T31-N4-c-loss-weight-sweep.md`, `T31-N4b-c-loss-weight-replication.md`; running index in `LEDGER.md`; template in its `README.md`
-- Code: N4b — `experiments/w10_replication_check.py` → `w10_replication.json` (the frozen rule applied to artifacts, paired by seed, written before any seeded arm existed), `logs/t031_n4b_train.sh`, and the `--seed` addition to `MultiResNet/train.py` (default `None` = previous behaviour; recorded in the sidecar and `<ckpt>.history.json`). N4 — `experiments/w9_gate_check.py` (judges the frozen gate from the eval JSONs), `w6_trainer_patch_tests.py` (20 checks), `logs/t031_n4_train.sh`, and the `--c-loss-weight` addition to `MultiResNet/train.py`. N1 — `experiments/w7_joint_ab_decode.py` (8 decoders + 2 sweeps), `w7_joint_ab_decode_tests.py` (33 checks), `w7_dissect_normalisation.py` (production-decoder audit). N2 — `experiments/w6_nochead_eval.py`, `w6_trainer_patch_tests.py` (8 checks), `w6_clip_binding.py`, `logs/t031_n2_train.sh`, and the additive patch to `MultiResNet/train.py` (`--no-c-heads`, `--save-last`, name→column target map, per-head validation history)
+- Reports: `docs/tasks/T031-reports/` — `W1-c-diagnosis.md`, `W2-c-lut-replacement.md`, `T31-N1-joint-alpha-beta-decode.md`, `T31-N2-c-deletion-retrain.md`, `T31-N4-c-loss-weight-sweep.md`, `T31-N4b-c-loss-weight-replication.md`, `CL-0-premise-check.md`; running index in `LEDGER.md` (8 rows); template in its `README.md`
+- Code: CL-0 — `experiments/cl_premise_check.py` → `experiments/out/cl_premise_check.json` (+ `.log`); dataset-premise test with permutation-null MI, coincidence-floor comparison and slot/byte identifiability, ~1 min CPU. N4b — `experiments/w10_replication_check.py` → `w10_replication.json` (the frozen rule applied to artifacts, paired by seed, written before any seeded arm existed), `logs/t031_n4b_train.sh`, and the `--seed` addition to `MultiResNet/train.py` (default `None` = previous behaviour; recorded in the sidecar and `<ckpt>.history.json`). N4 — `experiments/w9_gate_check.py` (judges the frozen gate from the eval JSONs), `w6_trainer_patch_tests.py` (20 checks), `logs/t031_n4_train.sh`, and the `--c-loss-weight` addition to `MultiResNet/train.py`. N1 — `experiments/w7_joint_ab_decode.py` (8 decoders + 2 sweeps), `w7_joint_ab_decode_tests.py` (33 checks), `w7_dissect_normalisation.py` (production-decoder audit). N2 — `experiments/w6_nochead_eval.py`, `w6_trainer_patch_tests.py` (8 checks), `w6_clip_binding.py`, `logs/t031_n2_train.sh`, and the additive patch to `MultiResNet/train.py` (`--no-c-heads`, `--save-last`, name→column target map, per-head validation history)

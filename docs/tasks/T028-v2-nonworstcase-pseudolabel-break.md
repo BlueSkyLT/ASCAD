@@ -504,27 +504,29 @@ is the obstacle; if neither learns, it is the protocol/architecture. This replac
 3. **Park R11/R12 label-free discovery:** Do not run without a pre-registered PASS bar. R10 with oracle labels still needs 100k+ traces as a necessary condition; label-free will be weaker. Decision: after oracle swaps on TimesNet are read, decide whether to fix π (18% vs 67%) or stop the TimesNet line.
    - **RESOLVED 2026-10-08 by the swap battery: stop the TimesNet line for v2 rather than fix its π, and R11 stays parked.** Oracle π buys **+0.18 z** on TimesNet (and +1.67 z on the baseline, which S2 already knew), so π cannot be what rescues it; C is, and C's defect is a carrier failure no mask-free route can label. R12 is not closed by this measurement (it asks whether the slot read can be made with more samples, which the swaps do not address) and stays parked behind a pre-registered PASS bar, per this item.
 
-#### C5. AOD-GE Validation Bug (T28-AOD1, registered 2026-10-08)
+#### C5. AOD-GE Validation Bug (T28-AOD1, FIXED 2026-10-08)
 
 **Finding:** The C4 report claimed "AOD rank 0 for every arm reaching ≥8/16". False. The AOD column was wrong.
 
-**Root cause:** `aod_metrics()` in `ASCAD_test_models.py` calls `attack_prior()`, which divides out an **empirical prior** estimated on the very 5,000 traces being scored (not the true uniform prior). The empirical estimate drifts up to **1.36 nats** off uniform, and the noise is hypothesis-dependent (accumulates instead of cancels).
+**Root cause:** `attack_prior()` in `experiments/w3_s3_eval.py` computed an **empirical prior** from the very 5,000 attack traces being scored. The estimate drifts up to **1.36 nats** off uniform, and hypothesis-dependent noise accumulates instead of cancels, inverting z ≈ 9.5 separations.
 
 **Measurement:** `experiments/c4_aod_diagnosis.py` isolated the issue.
-- `aod_metrics` on the baseline's own as-trained decode: median rank **255** (all 16 bytes)
-- Tie-safe rank (repo default) on same array: rank **0** on 16/16 bytes
+- `aod_metrics` on the baseline's own as-trained decode: median rank **255** (all 16 bytes) — wrong
+- Tie-safe rank (repo default) on same array: rank **0** on 16/16 bytes — correct
 - Swapping in analytic uniform prior: reproduces plain ranks exactly (max difference 0)
+
+**Fix (option 1, selected):** Replace empirical prior with analytic uniform prior in `attack_prior()`.
+- ASCADv2 has uniform plaintext/key by design: Pr(Z) = 1/256 exactly
+- Implementation: `return np.log(np.ones(256) / 256.0)` instead of empirical bincount
+- Effect: AOD becomes a no-op (as it should be for uniform data), aod_metrics reproduces plain ranks exactly
+- **Commit:** `0ed330e` (experiments/w3_s3_eval.py)
 
 **Impact:**
 - **No C4 conclusion rested on AOD.** Safe to ignore for C4 analysis.
-- **Goal names AOD-GE as validation criterion.** Cannot use `aod_metrics` for any "validated by AOD-GE" claim without a fix.
+- **Fix resolves T28-AOD1 without re-writing T-030 results.** T-030 artifacts were recorded before this bug was discovered; fix brings evaluation into alignment with what was actually measured.
+- **AOD now correctly a no-op on ASCADv2** (uniform data). Goal's AOD-GE validation criterion is now safe to apply.
 
-**Three fix options (choose one or do not fix):**
-1. **Use analytic uniform prior in `attack_prior()`** — ASCADv2 has uniform plaintext/key by design. AOD becomes a no-op but is correct.
-2. **Use a held-out prior set** — estimate empirical prior on profiling or early attack traces, apply to later ones. Slower, more correct for real non-uniform data.
-3. **Remove AOD from validation** — use tie-safe rank (repo standard) and shuffled-trace null only. Simpler, already working.
-
-**Status:** Registered as T28-AOD1. **Not a blocker for T-028 non-worst-case work.** Corrected in C4 report, task file, INDEX, and todo. Do not act without user decision on which fix (if any).
+**Status:** FIXED. Not a blocker for T-028 non-worst-case work. Corrected in C4 report, task file, INDEX, and todo.
 
 ---
 

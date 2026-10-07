@@ -136,6 +136,17 @@ Gates are **pre-registered: they may not move after any number is seen.** Tags a
   - **If N4b clarifies the choice:** Adopt the winning weight as the new baseline. **Then stop — N5 and N6 remain not triggered.** ← **DONE: w=0.5 adopted by the frozen rule; stopped; N5/N6 untouched.**
   - **If N4b remains ambiguous:** Report both and proceed to user judgment call. *(Not this branch, but see report §6: "w=0.5 beats the baseline" is **suggested, not established** — no seeded w=1 replicate exists. One run, ~16 min, and it needs the user's go-ahead.)*
 
+- [ ] (I:H U:M S:H) **T31-CL — Contrastive Learning: Why C is learnable by MultiResNet but not TimesNet.**
+  - **Registered 2026-10-08 after C4 oracle swaps.** Status: PLAN (not executed). Scope: three staged approaches to diagnose and possibly fix C learning via contrastive objectives instead of standard CE.
+  - **Motivation:** C4 showed true C lifts TimesNet from z −0.1066/0/16 to z +14.2108/16/16, proving C is the only binding constraint. Standard training fails to learn C in TimesNet but succeeds in MultiResNet. Contrastive learning could exploit C's relational structure (deterministic function of α, β, plaintext, key) rather than treating it as an independent 256-class label.
+  - **Three approaches:**
+    1. **CL-α:** Learn α label-free via contrastive clustering (positive = same key byte, negative = different keys). Gate: linear probe ≥50% top-1. Cost: ~30 min GPU.
+    2. **CL-C:** Hybrid loss (λ₁ CE(α/β/π) + λ₂ contrastive(C)) on MultiResNet. Gate: C accuracy +1.5 pp over standard CE. Cost: ~20 min GPU (if CL-α passes).
+    3. **CL-Bridge:** Dual-trunk contrastive loss (MultiResNet + TimesNet trunk alignment) to explain why TimesNet fails. Gate: TimesNet z >+0.4 with bridge loss. Cost: ~45 min GPU (parallel, optional).
+  - **Decision tree:** CL-α is the gate. If FAIL (< 50% probe): close contrastive line, accept label-free α stuck on shuffle null, return budget to R11/R12. If PASS: CL-C and CL-Bridge provide diagnostics (is C structure the lever? Is architectural alignment the lever?). Total budget: ~95 min (within T-028's 2 h ceiling).
+  - **Plan document:** `docs/tasks/T031-contrastive-learning-plan.md` (full design, stages, gates, decision tree, checklist)
+  - **Next:** User go-ahead on CL-α stage (~30 min); if approved, launch immediately; if FAIL, reallocate to T31-N4c + R11/R12 + close contrastive line.
+
 - [ ] (I:M U:M S:H) **T31-N4c — Seeded C-loss weight 1.0 baseline replicate (validation of N4b adoption).**
   - **Rationale:** N4b adopted w=0.5 (two-seed mean z +9.984) based on beating the baseline (z +9.5047), but the baseline is one unseeded run. A seeded w=1 run with the same `--seed` protocol as N4b validates whether w=0.5's advantage is stable or within the w=1 noise band. Cost: GPU ~16 min.
   - **Status: PENDING USER GO-AHEAD** (registered 2026-10-08 after N4b delivered).

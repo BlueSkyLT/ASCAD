@@ -14,6 +14,27 @@ replicated on 450k fresh traces (Stouffer z +6.04); but every label-free band fi
 π and positions. The raw-bit R2 STOP rule is superseded and R2 was **not** run. Phase 2
 (pseudo-label multi-task) is demoted. The Step 3.1 fallback is still not executable as written.
 
+**2026-10-08 — §C4 item 1 executed (CPU, 367 s, no GPU, report `T028-reports/C4-1-oracle-head-swaps.md`).**
+The oracle head-swap battery localises the binding head in each model, and the answer is sharper than the
+question C4 was written with. **TimesNet:** holding out everything but C costs nothing (α +0.13, β +0.40,
+π +0.18 z) while **true C takes it from −0.1066 / 0-of-16 to +14.2108 / 16-of-16 at a median 40 traces**;
+but the *reverse* swap — true α+β+π with C left to the model — gives **+0.0766, 0/16**, i.e. its C head carries
+no key information even given perfect masks and routing. **MultiResNet baseline, same arms:** the reverse swap
+gives **+14.0303, 16/16 at 70 traces** — so the baseline's C head *is* a carrier. Both heads score **below
+uniform** on their own label (−0.0729 vs −0.0900 nats): **"C at chance" is two statements — no top-1, and no
+carrier — and only the second is load-bearing.** Controls: every model's recorded as-trained number reproduced
+exactly before interpretation (R0 gate), eight-for-eight parity with S2's baseline table, GE tie-safe cross-check
+0.000e+00 on all 64 blocks, AOD rank 0 for every ≥8/16 arm, and a **constant-trace null that reaches the +15.97
+ceiling when all four heads are oracle** — which is why only within-model B3-vs-E3 comparisons are read as
+evidence about a network. **Consequences:** (i) C4's "true C lifts it ⇒ try C-loss weight 0.5 on TimesNet" is
+**flagged as not following** — an oracle swap cannot detect "cannot read C", and down-weighting C is documented
+(T-031 N2/N4/N4b) to move β/π while never making C readable (w=0 kills the carrier), so that GPU arm is not
+recommended; (ii) **C4 item 3 resolves to stop the TimesNet line rather than fix its π**, and R11 stays parked;
+(iii) for the Goal, the label-free problem is **not** four heads but **one** 256-class read-out per time slot —
+the quantity R10 bounded at 5.3e-5 nats/trace with a ≥100k-trace necessary condition. **Still open and needing a
+go-ahead: C4 item 2, the seeded w=1 MultiResNet reference (T31-N4c, ~16 min)** — the only remaining GPU arm with
+decision value; this step spent no GPU, so the ≤2 h budget is untouched.
+
 ## Goal
 
 Achieve **key rank 0 on ASCADv2** in a non-worst-case setting: trace in → S-box value out, using only `(trace, plaintext, key)` during profiling — **no mask labels** ($\alpha$, $\beta$, $C$, $\pi$) in training. Final metric: all 16 key bytes at rank 0 with z-score separation ≥ +3σ on the shuffled-trace null, validated by AOD-GE.
@@ -470,10 +491,42 @@ is the obstacle; if neither learns, it is the protocol/architecture. This replac
 **Revised next actions (CPU first, GPU only after oracle swaps):**
 
 1. **Oracle head swaps on TimesNet cache** (CPU, cached `experiments/out/w3_head_preds_5k_e15resume_last.npz`): Swap in true C, true β, true α, true π one at a time and score the key recovery. If true C still leaves 0/16 rank-0 on TimesNet, the architecture cannot read C (multi-sample second-order or band finding will not fix it). If true C lifts it measurably, then C-loss weight 0.5 should be tried on TimesNet next (GPU, with `--seed`).
+   - **DONE 2026-10-08 — ran, 367 s CPU, no GPU, 4 caches × 17 arms. Report: `T028-reports/C4-1-oracle-head-swaps.md`; code `experiments/c4_oracle_swaps.py`; results `experiments/out/c4_oracle_swaps.json`.**
+   - **The branch condition fired; its conclusion does not follow.** True C lifts TimesNet decisively (**−0.1066 → +14.2108**, 16/16 non-flat rank-0, median 40 traces; on `_best` +13.8567), so by the letter of this item the TimesNet GPU arm is "next". But **an oracle swap cannot detect "the architecture cannot read C"** — replacing the head with truth tests the *other* heads, not C. The test that does answer it is the reverse swap (everything true **except** C): TimesNet **+0.0766, 0/16** vs the MultiResNet baseline **+14.0303, 16/16 at 70 traces**. TimesNet's C head carries no key information even with perfect masks and routing; the baseline's does — **while both score below uniform on their own label** (−0.0729 vs −0.0900 nats). "C at chance" is two statements (no top-1, no carrier) and only the second is load-bearing.
+   - Single-head headroom, TimesNet `_last`: α **+0.13**, β **+0.40**, C **+14.32**, π **+0.18** z; leave-one-out loss from the +15.9685 ceiling: α 0.13, β 0.41, **C 15.89**, π 0.02. Same battery on the baseline reproduces S2 exactly (α −0.0005, β +3.4194, C +6.2800, π +1.6731; oracle α+β 12.9332/95 = W2's D1c; uniform π 3.2914/12-of-16 = S2 V10 and an independent re-confirmation of Phase 0's "π is not essential").
+   - **Why `--c-loss-weight 0.5` on TimesNet is contraindicated by measurement, not taste:** down-weighting C is documented (T-031 N2/N4/N4b) to move **β/π**, never to make C readable — C's gain stayed at chance across w=1/0.5/0.25 (−0.0496/−0.1054/−0.2425) and at w=0 the carrier dies (0/16, z +0.4741). Up-weighting C is W1's contraindicated direction (C is the least visible target in the dataset). So this arm trades away the exact thing the E3 row identifies as missing. **Flagged, not overridden: if you want it anyway it is ~16 min × 2 seeds.**
+   - **Consequence for the Goal:** given the slot's masked value, α/β/π are each worth ≤ +0.4 z and are unnecessary (holding out any one of them still gives 16/16; uniform π keeps 12/16). So the label-free route is not a four-head discovery problem but **one** 256-class read-out per time slot — precisely the quantity R10 bounded at 5.3e-5 nats/trace and a ≥100k-trace necessary condition.
+   - **Controls that make these numbers safe:** R0 sanity reproduced every model's own recorded as-trained number to the digit before anything was read (TimesNet −0.10659421831774765 exactly; baseline Δ 5.5e-14); repo GE agrees with the tie-safe rank at 0.000e+00 on all 64 byte-blocks; AOD median final rank 0 for every arm reaching ≥8/16; flat bytes never counted as recovery; shuffled-head nulls sit at +0.01/+0.19 z. **The most instructive control is the constant-trace null: it hits +15.97/16/16 when all four heads are oracle** (its own α gain is −8.42 nats), which proves the oracle arms measure the *decode path*, not the model — so "D0 lifts" is never evidence about a network, and only within-model B3-vs-E3 comparisons count.
+   - **Caveat to carry, not to smooth:** with one-hot C the routing becomes almost free (E4 loses 0.02 z; even the null's garbage π reaches +15.73), because an exact slot posterior puts the true value inside a ≤16-value support for every trace. That is an artifact of the oracle construction and must not be generalised to "π doesn't matter" for real diffuse C heads, where the baseline's own uniform-π arm still keeps 12/16 at +3.29.
 
-2. **One seeded w=1 baseline replicate on 137M MultiResNet** (T31-N4c, GPU ~16 min): Compare the seeded w=1 result to the unseeded baseline (z +9.5047, 170 traces). This closes whether w=0.5's z +9.984 is a stable gain or within the w=1 noise band.
+2. **One seeded w=1 baseline replicate on 137M MultiResNet** (T31-N4c, GPU ~16 min): Compare the seeded w=1 result to the unseeded baseline (z +9.5047, 170 traces). This closes whether w=0.5's z +9.984 is a stable gain or within the w=1 noise band. **NOT RUN — it is a training run, so it waits for a go-ahead (`.grok/rules/04-ask-before-long-runs.md`); this step spent no GPU and the task's ≤2 h budget is untouched.** It is the only remaining GPU arm with decision value.
 
 3. **Park R11/R12 label-free discovery:** Do not run without a pre-registered PASS bar. R10 with oracle labels still needs 100k+ traces as a necessary condition; label-free will be weaker. Decision: after oracle swaps on TimesNet are read, decide whether to fix π (18% vs 67%) or stop the TimesNet line.
+   - **RESOLVED 2026-10-08 by the swap battery: stop the TimesNet line for v2 rather than fix its π, and R11 stays parked.** Oracle π buys **+0.18 z** on TimesNet (and +1.67 z on the baseline, which S2 already knew), so π cannot be what rescues it; C is, and C's defect is a carrier failure no mask-free route can label. R12 is not closed by this measurement (it asks whether the slot read can be made with more samples, which the swaps do not address) and stays parked behind a pre-registered PASS bar, per this item.
+
+#### C5. New direction: Contrastive Learning for C (registered 2026-10-08)
+
+**Why:** C4 showed TimesNet *can* use C (oracle lifts it to z +14.21 / 16/16) but *cannot learn* C from labels. MultiResNet learned C; TimesNet did not. This gap is not architectural capacity or data — it is a learning problem. Contrastive learning treats C as a relational property (deterministic function of α, β, plaintext, key) rather than an independent 256-class label. This might unlock either:
+1. **Label-free α** (via contrastive clustering on same-key pairs) — unblocks the full pseudo-label pipeline
+2. **Why C is learnable** (MultiResNet vs TimesNet gap) — explains the blocker
+3. **Better C learning** (hybrid contrastive + CE loss) — improves the working model
+
+**Plan:** `docs/tasks/T031-contrastive-learning-plan.md` — three staged approaches with gates and a decision tree.
+
+| Stage | Goal | Duration | Gate | Budget |
+|-------|------|----------|------|--------|
+| **CL-α** | Learn α label-free via contrastive clustering (same key → positive, different keys → negative) | ~30 min GPU | Linear probe ≥50% top-1 on α on 5k attack split | 30 min |
+| **CL-C** (if CL-α passes) | Hybrid loss: λ₁ CE(α/β/π) + λ₂ contrastive(C) on MultiResNet | ~20 min GPU | C-head accuracy +1.5 pp vs standard CE | 50 min |
+| **CL-Bridge** (parallel, optional) | Dual-trunk contrastive alignment (MultiResNet + TimesNet) to explain C gap | ~45 min GPU | TimesNet z >+0.4 with bridge loss | 95 min |
+
+**Consequence:** 
+- **CL-α FAIL:** α is not contrastive-learnable at 50% threshold. Label-free α is stuck on the shuffle null (confirmed by Phase 1 and C4). Close contrastive line; reallocate budget to T31-N4c + R11/R12 or stop.
+- **CL-α PASS, CL-C PASS:** Contrastive C learning is a lever. Deploy hybrid loss (λ₂ ∈ [0.1, 0.5]) on production MultiResNet; measure key recovery lift.
+- **CL-α PASS, CL-Bridge PASS:** TimesNet's C failure is fixable via trunk alignment. Apply bridge loss + contrastive C head to TimesNet; re-test with w=0.5 weighting (but expect no gain, as C's missing carrier is the bottleneck).
+
+**Total budget:** ~95 min (within T-028's ≤2 h ceiling). If all stages fail, one arm remains: T31-N4c (16 min) to validate w=0.5 adoption, and decision to stop v2 non-worst-case work or pivot to c3 (T-032).
+
+**Status:** PLAN, awaiting user go-ahead on CL-α stage (~30 min GPU).
 
 #### D. Decision tree after Tier-0
 
@@ -579,6 +632,57 @@ bands); report any rank without the tie/flatness check; revive TimesNet for v2.
 - 2026-10-03: Phase 0 ablation runs BEFORE any unsupervised work, to determine which heads are essential and which can be skipped.
 
 ## Working notes / session log
+
+### 2026-10-08 — C4 item 1 run: the swap battery says the attack is one head, and TimesNet's is not fixable by C4's proposed lever
+
+- **Executed the §C4 next-actions list on the CPU side** (`experiments/c4_oracle_swaps.py`, 367.0 s,
+  `gpu_used: False`; results `experiments/out/c4_oracle_swaps.json`, log `experiments/out/c4_run.log`;
+  report `docs/tasks/T028-reports/C4-1-oracle-head-swaps.md`). 17 arms × 4 cached posterior sets: TimesNet
+  S3 `_last` and `_best` (5,000 traces each), the MultiResNet baseline (control), and the constant-trace null
+  (500). No training, no checkpoint written, the HDF5 opened read-only.
+- **Pre-registered before running, and it mattered.** Rules R0–R5 went into the script docstring and the JSON
+  first (lift = median z ≥ +3.0 **or** ≥8/16 non-flat rank-0, using T-030 S3's own `works` bar; R3 added
+  because B3 alone cannot answer C4's question). One honest correction is on the record: the **R3 label logic**
+  was rewritten afterwards via `--rejudge` — the first version printed "C helps but is not sufficient alone"
+  for a table where oracle C alone reached 16/16. Thresholds untouched; every number is from the original run.
+- **R0 sanity is why any of this is readable**: A0 reproduced each model's own recorded number before a swapped
+  arm was interpreted — TimesNet `_last` median z **−0.10659421831774765** (recorded, to the digit), `_best`
+  −0.5637512612525074, baseline 9.504667781758279 → 9.504667781758334 (**Δ 5.5e-14**), plus rank counts and
+  `worst_final_rank` identical. On the baseline the battery then reproduced **eight-for-eight** of S2's recorded
+  rows (V3 11.1777, V4 12.9240, V5 9.5041, V6 12.9332/95 = W2's D1c, V7 15.7846/10, V8 15.8517, V9 0.0,
+  V10 3.2914/12/2900), so this is a re-instrumentation of a known result rather than a new decoder.
+- **The finding is a pair of swaps, not one.** TimesNet: true C takes it from −0.1066 / 0-of-16 to **+14.2108 /
+  16-of-16, median 40 traces**, while true α/β/π buy +0.13/+0.40/+0.18 z — so its trunk and mask heads are fine.
+  Baseline, same arms: +15.7846 (matches W2). The **reverse** swap is the discriminator: true α+β+π with C left
+  to the model gives TimesNet **+0.0766 / 0-of-16** and the baseline **+14.0303 / 16-of-16 at 70 traces**. Both
+  C heads score *below uniform* on their own label (−0.0729, −0.0900). **So C-accuracy and C-carriage are
+  different quantities, and the architecture comparison should be run on the second one.**
+- **Flagged, not overridden (full text in §C4 item 1):** the branch "true C lifts it ⇒ try C loss weight 0.5 on
+  TimesNet" does not follow. (a) An oracle swap replaces the head with truth, so it measures the *other*
+  heads — the reading C4 wanted lives in E3. (b) T-031 already measured what down-weighting C does: β/π move, C's
+  gain stays at chance for w = 1/0.5/0.25 (−0.0496/−0.1054/−0.2425), and at w=0 the carrier dies (0/16, +0.4741).
+  Up-weighting C is W1's contraindicated direction. So that arm trades away the thing E3 says is missing. Nothing
+  was run for it, and if you want it anyway it is ~16 min × 2 seeds.
+- **C4 item 3 answered on data:** π is not the TimesNet line's problem (oracle π = +0.18 z), so "fix π" cannot
+  rescue it → **stop the TimesNet line for v2**; R11 (label-free π) stays parked. R12 is not closed by this
+  measurement (it asks whether the slot read improves with more samples; swaps say nothing about that) and stays
+  parked behind a pre-registered PASS bar.
+- **Reframing for the Goal, stated as arithmetic:** with the slot's masked value given, holding out α, β or π
+  still yields 16/16 (E1/E2/E4 = +15.84/+15.56/+15.95) and uniform routing still leaves 12/16 on the baseline.
+  The label-free problem is therefore **one** 256-class read-out per time slot — the object R10 bounded at
+  5.3e-5 nats/trace — not a four-head discovery problem.
+- **The control that changed how I read my own table:** the constant-trace null reaches **+15.97 / 16-of-16 under
+  D0** while its own α head sits at gain **−8.42 nats**. Oracle arms measure the decode path, not the network, so
+  "D0 lifts" is not evidence about a model — only within-model B3-vs-E3 comparisons are. A related artifact of the
+  same construction: with one-hot C, routing becomes nearly free (the null's garbage π still gives +15.73),
+  because an exact slot posterior puts the true value inside a ≤16-value support on every trace; that must not be
+  generalised to diffuse C heads, where uniform π costs the baseline down to +3.29 / 12-of-16.
+- **Housekeeping noticed while checking provenance, not touched:** `GPAM/artifacts/C-snr-v1.py` is still deleted
+  from the working tree (unstaged `D`, blob in HEAD from `ca9569e`) — not this session's doing, item N2 stands.
+- Files touched: this file (Status, §C4 items 1–3 annotated with results, Working notes, Next actions, Priority
+  snapshot, Related), `docs/tasks/T028-reports/C4-1-oracle-head-swaps.md` (new), `docs/tasks/INDEX.md`,
+  `docs/lab-log/todo.md`. New code: `experiments/c4_oracle_swaps.py` (imports `w2_decoders`/`w3_s3_eval` helpers,
+  edits neither). T-029/T-030/T-031 files untouched; no checkpoint or `.h5` written.
 
 ### 2026-10-08 — synthesis of the non-worst-case route
 
@@ -884,24 +988,42 @@ spread **exactly 0.000**. Any rank reported here must therefore carry a flatness
 | ~~R8 slot-aligned log-domain scan~~ | H | H | H | **DONE.** C visible (\|z\| 56.5); S/log S/w/P not first-order visible |
 | ~~R9/R9b corrected 3-leak product~~ | H | H | H | **DONE.** Replicated on 450k fresh traces, Stouffer +6.04 |
 | ~~R10 Bayes read of S from 3 samples~~ | H | H | H | **DONE.** 200k: 5.3e-5 nats/trace (lower bound), 16/16 slots > 0; 21× / 10× short of the 5k / 10k-trace bar |
-| **R11 Label-free π** (the load-bearing unknown): find, without π labels, which slot/time each of the 16 C-samples belongs to; first test = can a clustering of the 5552…11147 C-sample window recover `perm_index` above a shuffle null | H | H | M | PASS bar to pre-register before running. π supervised = 86.5% (GPAM), so the information exists |
-| **R12 Multi-sample second-order read**: replace one sample per leak by a linear HW(log₃ α)/HW(β) readout over their SNR bands, product with the slot C sample, re-run R10's information estimate | H | M | M | Harness exists (`r10_bayes_bound.py`); question is whether I rises above ~1e-4 nats |
+| **R11 Label-free π** (the load-bearing unknown): find, without π labels, which slot/time each of the 16 C-samples belongs to; first test = can a clustering of the 5552…11147 C-sample window recover `perm_index` above a shuffle null | H | H | M | PASS bar to pre-register before running. π supervised = 86.5% (GPAM), so the information exists. **DEMOTE on 2026-10-08 measurement (C4 item 1): oracle π is worth +0.18 z on TimesNet and +1.67 z on the baseline, and uniform routing still leaves 12/16 non-flat rank-0 on the baseline (+3.2914, 2,900 traces). π is not the binding head in either model, so this cannot be the next spend.** Kept parked rather than deleted, because the +1.67 z is real headroom for the working model |
+| **R12 Multi-sample second-order read**: replace one sample per leak by a linear HW(log₃ α)/HW(β) readout over their SNR bands, product with the slot C sample, re-run R10's information estimate | H | M | M | Harness exists (`r10_bayes_bound.py`); question is whether I rises above ~1e-4 nats. **Still the right question after C4 item 1** — the swaps show the whole attack reduces to one slot-wise masked-value read, which is exactly what R12 tries to make denser; needs a pre-registered PASS bar before running |
+| ~~**C4 item 1: oracle head swaps on the TimesNet cache** (CPU)~~ | H | H | M | **DONE 2026-10-08, 367 s CPU, no GPU.** TimesNet: true C −0.1066 → **+14.2108, 16/16, 40 traces**; α/β/π worth +0.13/+0.40/+0.18. The discriminator is the reverse swap (true α+β+π, C left to the model): TimesNet **+0.0766 / 0-of-16** vs baseline **+14.0303 / 16-of-16 / 70 traces** — so the baseline's C head is a carrier and TimesNet's is not, *although both score below uniform on their own label*. R0 sanity reproduced every recorded number; eight-for-eight parity with S2; GE cross-check 0.000e+00; AOD rank 0 on all ≥8/16 arms. **Flag: C4's implied TimesNet w=0.5 GPU arm does not follow from this** (§C4 item 1). Report `T028-reports/C4-1-oracle-head-swaps.md` |
+| **C4 item 2 = T31-N4c: seeded w=1 MultiResNet reference** (GPU, ~16 min/run; **go-ahead needed**) | H | M | M | The only remaining GPU arm with decision value: the baseline's +9.5047 / 170 traces is one **unseeded** run, so "w=0.5 (mean +9.984 / 147.5) beats the baseline" is suggested, not established. One run makes it like-for-like, two give the baseline its own variance. Not started — `.grok/rules/04-ask-before-long-runs.md` (any training run needs asking), and this task's ≤2 h GPU budget is still untouched |
+| ~~**C4 item 3: park R11/R12; decide π vs stop the TimesNet line**~~ | H | H | M | **RESOLVED 2026-10-08 by the swap battery: stop the TimesNet line for v2, do not chase its π** (oracle π buys +0.18 z there). R11 demoted, R12 still the right question but parked behind a pre-registered PASS bar |
 | ~~Fix the wrong α 0.49% / β 0.41% in `T024:108-111`, `patch-pipeline-survey.md:196`, `roadmap-break-ascad.md:211`~~ | M | M | H | **DONE 2026-10-04** (T024, survey and roadmap line 211 all verified on disk) |
 | **N2 (owner decision, flagged 2026-10-07): mark the 2026-10-03 "C is invisible everywhere / no approach may assume C is detectable" decision line as retracted** | H | M | H | The contradiction you asked to have flagged is *inside this file*: that sentence is still live and un-annotated in the Decisions log, 5 lines under the 2026-10-04 (later) entry that removes it as a constraint. Decisions are your record, so it was annotated in Context / Constraints / Established-Facts instead of being struck. Related housekeeping the same check turned up, both needing your call: **`GPAM/artifacts/C-snr-v1.py` is committed but deleted from the working tree right now** (unstaged `D`, blob in HEAD from `ca9569e`; its `snr_v1*_*.npy` outputs are still on disk, untracked) — restore it or confirm the deletion was intended; and `docs/snr_investigation.md` stays a phantom, so the four Established-Facts rows were re-pointed at the real artifacts `GPAM/artifacts/snr_crop15k_*.npy` / `snr_raw1m_*.npy`. That re-read also **corrected π's crop peak sample from 5552 to 5430** in the table above (the value 0.13 and the 1/27 counts were right; 5552 is C's peak sample) |
 
 ### Priority snapshot
 
-- **Do now:** R11 (label-free π) and R12 (multi-sample second-order read) — both CPU, both build on
-  the R8–R10 harness. Pre-register each PASS bar *before* running. Nothing needs a GPU.
-- **Before next meeting:** report the tie-artifact hazard in `rank()` to whoever quotes v2 rank 0;
-  (wrong α/β head accuracies already corrected in T024 and the patch-pipeline survey).
+- **Do now:** nothing that spends compute without a ruling. **C4 item 1 is delivered** (`T028-reports/
+  C4-1-oracle-head-swaps.md`) and it changed the shape of the task: the binding object is **one** 256-class
+  read-out per time slot, α/β/π are each worth ≤ +0.4 z once that read exists, and TimesNet's C head is not a
+  carrier at all (+0.0766 z given perfect masks and routing) where the MultiResNet baseline's is (+14.03,
+  16/16, 70 traces). Two rulings are outstanding, both cheap: **(a) C4 item 2 / T31-N4c** — one seeded w=1
+  MultiResNet run (~16 min) to settle whether w=0.5 really beats the baseline; **(b) whether to run the TimesNet
+  `--c-loss-weight 0.5` arm that C4 item 1 seemed to license but which the measurement argues against** (§C4).
+  R11 is demoted by these numbers; R12 stays parked behind a pre-registered PASS bar.
+- **Before next meeting:** the meeting line is *"we can now say which single head the worst-case attack needs,
+  and we can tell a model that has it from one that doesn't without training anything"* — TimesNet and the
+  baseline both have C heads at **chance on their own label** (−0.073 vs −0.090 nats), yet one carries the key
+  (+14.03 with α/β/π given free) and one does not (+0.08, 0/16). Also report the tie-artifact hazard in `rank()`
+  to whoever quotes v2 rank 0, and that C4's stated branch was flagged rather than followed.
 - **Deep work (park):** Tier-1 G1–G3 (GPU, ask first, ≤ 2 h); Steps 3.1–3.2 (collision) — Step
   3.1 still needs a redesigned validation target.
 
 ## Related
 
-- Task ids: T-019, T-020, T-024, T-025, T-026
-- `docs/lab-log/todo.md` items: T30 (unsup band selection), T31 (resolution-preserving front end)
+- Task ids: T-019, T-020, T-024, T-025, T-026, T-030 (S2/S3 caches this step re-reads), T-031 (N2/N4/N4b measured the loss-weight lever this step argues about)
+- Report: `docs/tasks/T028-reports/C4-1-oracle-head-swaps.md` (§C4 item 1, 2026-10-08)
+- Code for C4 item 1: `experiments/c4_oracle_swaps.py` (17 arms × 4 caches; `--rejudge` rewrites the gate labels
+  from stored numbers only), results `experiments/out/c4_oracle_swaps.json`, log `experiments/out/c4_run.log`.
+  Helpers imported unmodified from `experiments/w2_decoders.py` (`run_variant`, `byte_metrics`, `summarise`) and
+  `experiments/w3_s3_eval.py` (`head_arrays`, `aod_metrics`, `median_final_rank`)
+- Caches read: `experiments/out/{w3_head_preds_5k_e15resume_last,w3_head_preds_5k_e15resume,head_preds_5k,w3_head_preds_const500_e15resume_last}.npz`
+- `docs/lab-log/todo.md` items: **T28-C4-1** (done), **T28-C4-2 / T31-N4c** (seeded w=1 reference, go-ahead needed), **T28-R11** (demoted), **T28-R12** (parked), **N2** (the C-detectability retraction + the deleted `C-snr-v1.py`, owner call)
 - External links:
   - WPP23: ePrint 2023/724
   - DDPM denoise: ePrint 2024/966

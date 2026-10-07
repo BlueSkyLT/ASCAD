@@ -28,10 +28,10 @@ Achieve **key rank 0 on ASCADv2** in a non-worst-case setting: trace in → S-bo
   - `leakage_localizer/v2_autoencoder_localizer.py` — unsupervised anomaly localizer (126 active patches, 10× more selective)
   - `LLM/band_scan.py` — band selection infrastructure with `--select {snr,low_snr,contiguous,spread,random}`
   - `GPAM/artifacts/C-snr-profile.py` — SNR measurement script (validates against documented peaks)
-  - `GPAM/artifacts/C-snr-v1.py` — v1 SNR measurement
+  - `GPAM/artifacts/C-snr-v1.py` — v1 SNR measurement. **Committed in git but currently deleted from the working tree** (unstaged `D`; the blob is in HEAD from `ca9569e`); its outputs `snr_v1crop_{r,C,S}.npy` / `snr_v1raw_*.npy` are still on disk, untracked. Restore with `git checkout -- GPAM/artifacts/C-snr-v1.py` — found 2026-10-07, cause unknown, not done by this session.
   - Data: `ascadv2-extracted.h5` (15k crop, 500k traces), raw shards (8 × ~12 GB, 1M samples/trace)
 - Related docs:
-  - `docs/snr_investigation.md` — **CRITICAL**: confirms SNR(C) = 0.072 on both crop and raw (C is invisible everywhere)
+  - `docs/snr_investigation.md` — cited as **CRITICAL** for SNR(C) = 0.072 on both crop and raw. **Two problems, flagged 2026-10-07: (i) the file does not exist** — not in the working tree, not in `git ls-files`, no commit ever touched it (the four Established-Facts rows are now re-sourced to `GPAM/artifacts/snr_crop15k_*.npy` / `snr_raw1m_*.npy`, which do exist and reproduce the numbers); **(ii) its "(C is invisible everywhere)" parenthetical is the reading R8 retracted** — the slot-aligned HW(C) test gives |z| = 56.5 (see the Constraints bullet below). Do not quote this line as evidence either way.
   - `docs/notes/ascadv2-label-frequency.md` — label frequency prior artifacts (AOD-GE validation required)
   - `docs/notes/ascadv2-direct-evidence-explained.md` — 3O product failure (corr = 0.0009)
   - `docs/survey-ascadv2-dl-2022-2026.md` — literature: no non-worst-case break exists with shuffle ON
@@ -39,6 +39,9 @@ Achieve **key rank 0 on ASCADv2** in a non-worst-case setting: trace in → S-bo
 - Related tasks: T-019 (GPAM reproduction), T-020 (LLM/Transformer pipeline), T-024 (TimesNet multi-task), T-025 (variance localizer), T-026 (autoencoder localizer)
 - Constraints:
   - **C is weak but NOT invisible** (corrected 2026-10-04). Its 256-class SNR of 0.072 is only 4.6× the 256-class noise floor at 16k traces, but a 1-dof Hamming-weight test on the slot-aligned label gives z = 56.5 at 50k traces (R², 0.064; R8). The earlier "invisible" reading was a detector-power and threshold artifact (256-class SNR is a poor detector for HW leakage; the ">0.1" cut-off is arbitrary), plus a byte-indexed label in the 3O test. C is only readable slot-aligned (needs π) and as HW(C).
+  - **⚠ Contradiction left open in this file — flagged 2026-10-07 for the task owner (you; every session here commits under the same authorship, so there is no third party to notify).** The two readings of C's detectability are both still live in the same document: the bullet immediately above (plus the 2026-10-04 (later) Decisions entry at line 538, "C physically invisible … removed as a constraint; do not re-derive the old numbers; cite R8/R9b") versus the 2026-10-03 Decisions entry at line 543, which carries **no inline retraction marker** and still reads "C is invisible everywhere (SNR 0.072, 4.6× noise floor). **No approach in this task may assume C is detectable from the trace**". The Decisions log is reverse-chronological, so a reader who goes top-down does meet the correction first — but anyone who *searches* this file for "invisible" or "may assume" lands on line 543 as a live-sounding prohibition, and that phrasing vetoes exactly the R8-based approaches the 10-04 correction was meant to unlock. (The Context block above also asserted the invisible reading until this edit; see the `docs/snr_investigation.md` note.) Fix wanted: put an inline "retracted by line 538 / R8" marker on the 2026-10-03 entry — it is a decision record, so **striking it is your call, not mine to make silently.**
+  - **⚠ The citation behind that policy sentence cannot be opened, but its numbers can.** All four Established-Facts SNR rows (α, β, π, C) listed `docs/snr_investigation.md` as their Source, and **that file does not exist** — absent from the working tree, from `git ls-files`, and from all history (already noted in the Phase 0 log's "Citation fix" entry). It is now re-sourced to the **primary artifacts that do exist**: `GPAM/artifacts/snr_crop15k_{rm,rout,c,p}.npy` + `snr_raw1m_*.npy`, produced by the present `GPAM/artifacts/C-snr-profile.py`; all four rows reproduce from them today, and that re-read **found and fixed one error — π's crop peak is at sample 5430, not the 5552 the row claimed** (5552 is C's peak sample; π's value 0.13 and its counts 1/27 were right). See the Established-Facts caveat for the full numbers. Two things still worth your attention: (i) `GPAM/artifacts/C-snr-v1.py`, cited one line above in Context, **is committed in git but deleted from the working tree right now** (unstaged `D`, blob present in HEAD from `ca9569e`) — recover with `git checkout -- GPAM/artifacts/C-snr-v1.py`, its v1 outputs `snr_v1crop_{r,C,S}.npy` / `snr_v1raw_*.npy` are still on disk and untracked; (ii) π's SNR is a **16-class** quantity while the other three are 256-class, so `SNR(π) = 0.13` must never be quoted beside α's 2.0 as if comparable. (The companion row's own ratio does check out: raw 0.2085 against its stated null floor 0.0009 is 232×, versus the 227× it claims.)
+  - **One more datum on "weak vs invisible", from T-030 S3 on 2026-10-07:** the 34-head TimesNet's C-head log-gain got **worse** with 5 more epochs of training (−0.053 → −0.073 nats) while α crossed its 90% bar in the same model. Continued training degrading the head is the signature of a target/loss problem, not of an undertrained head — consistent with T-031's W1 (C is the least visible target yet takes 52.6% of the loss). It does **not** settle the slot-aligned question, because these heads are trained slot-indexed on `sbox_masked` and no head here is trained on HW(C); do not read it as a refutation of R8.
   - Non-worst-case: training must NOT use `alpha_mask`, `beta_mask`, `masks`, `desync`, `permind`, or `sbox_masked` fields from HDF5 metadata.
   - MAY use: `traces`, `plaintext`, `key`, `ciphertext` fields (standard profiled attack).
   - GPU budget: ≤ 2 hours total across all phases.
@@ -49,12 +52,30 @@ Achieve **key rank 0 on ASCADv2** in a non-worst-case setting: trace in → S-bo
 
 These are confirmed results. An executing agent should use them as ground truth, not re-investigate:
 
+> **Provenance re-verification, 2026-10-07.** These four rows used to cite `docs/snr_investigation.md`,
+> which **does not exist in this repo** (not in the tree, not in `git ls-files`, never committed) — a gap
+> first recorded in this file's own Phase 0 session log ("Citation fix", 2026-10-03). The Source cells now
+> point at the **primary artifacts, which do exist**: `GPAM/artifacts/snr_crop15k_{rm,rout,c,p}.npy` and
+> `snr_raw1m_{rm,rout,c,p}.npy`, produced by `GPAM/artifacts/C-snr-profile.py` (targets `rm`=α,
+> `rout`=β, `c`=`sbox_masked[:,0]`, `p`=`perm_index[:,0]`; `--byte` default 0). Read back today, they
+> reproduce every number here — α **1.996 @ 867**, 871 samples > 0.1 crop and 14,576 of 1M raw; β
+> **1.4195 @ 338**, 55 crop / 267 raw; C **0.0721 @ 5552**, **0** samples > 0.1, same value raw
+> (@ 455552); π **0.1334** crop, **0.2085 @ 282070** raw, 1 / 27 samples > 0.1 — and they also exposed
+> **one error, now corrected above: π's crop peak is at sample 5430, not 5552** (5552 is C's peak
+> sample, copied into π's row; the *value* 0.13 and both counts were right). `LLM/snr_check.py`
+> independently re-measured α/β/C on 20k traces a different way
+> (`docs/2026-09-23/out/SNR-v2-alpha_mask.json`, `SNR-v2-beta_mask.json`, `SNR-v2-sbox_masked.json`,
+> curve `SNR-alpha-curve.npy`) and agrees to within its own sampling (1.986 / 1.520 / 0.0678).
+> Two cautions stand: **π is a 16-class SNR and the other three are 256-class, so 0.13 is not
+> comparable to 2.0** (π's own median floor is 0.0007); and π's crop peak sitting 122 samples from C's
+> is unsurprising, since slot 0 holds `C[π(0)]` — which byte leaks at that time is itself π-dependent.
+
 | Fact | Source | Number |
 |------|--------|--------|
-| SNR(α) = 2.0 at sample 867 (crop), 205867 (raw) | `docs/snr_investigation.md` | 871 samples > 0.1 in crop, 14,576 in raw |
-| SNR(β) = 1.4 at sample 338 (crop), 205338 (raw) | `docs/snr_investigation.md` | 55 samples > 0.1 in crop, 267 in raw |
-| SNR(π) = 0.13 at sample 5552 (crop), 0.21 at 282070 (raw) | `docs/snr_investigation.md` | 1 sample > 0.1 in crop, 27 in raw |
-| SNR(C) = 0.072 on a 256-class SNR, 0 samples > 0.1 — **but NOT invisible: slot-aligned HW(C) 1-dof z = 56.5 at 50k traces, 530 samples |z| > 6 (R8, 2026-10-04)** | `docs/snr_investigation.md` | Identical in crop and raw |
+| SNR(α) = 2.0 at sample 867 (crop), 205867 (raw) | `GPAM/artifacts/snr_crop15k_rm.npy`, `snr_raw1m_rm.npy` (via `C-snr-profile.py`) | 871 samples > 0.1 in crop, 14,576 in raw |
+| SNR(β) = 1.4 at sample 338 (crop), 205338 (raw) | `GPAM/artifacts/snr_crop15k_rout.npy`, `snr_raw1m_rout.npy` | 55 samples > 0.1 in crop, 267 in raw |
+| SNR(π) = 0.13 at sample **5430** (crop; the 5552 written here originally was C's peak sample — corrected 2026-10-07 from `GPAM/artifacts/snr_crop15k_p.npy`, peak 0.1334 @ 5430), 0.21 at 282070 (raw) | `GPAM/artifacts/snr_crop15k_p.npy`, `snr_raw1m_p.npy` | 1 sample > 0.1 in crop, 27 in raw |
+| SNR(C) = 0.072 on a 256-class SNR, 0 samples > 0.1 — **but NOT invisible: slot-aligned HW(C) 1-dof z = 56.5 at 50k traces, 530 samples \|z\| > 6 (R8, 2026-10-04)** | `GPAM/artifacts/snr_crop15k_c.npy`, `snr_raw1m_c.npy` (0.0721 @ 5552 crop, @ 455552 raw) | Identical value in crop and raw |
 | MultiResNet 34h + sub_avg: all 16 bytes rank 0 at 5k traces | T-024 | z-scores +3.89σ to +6.86σ |
 | MultiResNet head accs, 5k attack traces, **recomputed 2026-10-04** from `experiments/out/head_preds_5k.npz` vs `Attack_traces/labels`: **α 100.00%**, β 5.84%, C 0.69%, π 67.03%. Log-lik gain over uniform: α +5.48 nats (max 5.545), β +1.51, π +1.80 (max 2.77), **C −0.09** | this session | Corrects T-024's "α 0.49%, β 0.41%" (wrong label column, source not located). Same error appears in `T024:108-111`, `docs/notes/patch-pipeline-survey.md:196`, `docs/roadmap-break-ascad.md:211` and **has been corrected in all three locations** (2026-10-04). α is `masks[:,18]`, β is `masks[:,17]` |
 | 3O centered product: corr = 0.0009 (dead) — **INVALID TEST, superseded by R9/R9b** (C was labelled by byte, not by time slot; α was modelled as HW(α), not HW(log₃ α)) | `docs/notes/ascadv2-direct-evidence-explained.md` | All 16 bytes within noise |
@@ -338,7 +359,7 @@ the answer is *not for producing labels*:
 | R4 ✅ **DONE as R4a/R4b/R4c 2026-10-04 (see C3)** | **Background/resolution ablation inside the supervised probe** (same 2-layer MLP, same 1,600 samples, same α label): raw / global-mean subtraction (reproduce the no-op) / per-trace mean + scale / top-k PCA removal / **adjacent difference** x[t]−x[t−1] / adjacent mean (reproduce the 0.008 kill) | Tests "α lives in fine structure": the difference should survive while the sum dies. Picks the label-free front end that is also resolution-preserving. Falsifier: if the difference also collapses, α needs absolute level |
 | R5 | **Variance budget by source** (ORACLE, understanding only): per-sample fraction explained by α, β, π, the 16 known S, top-k label-free PCs, residual. Plus a clock-phase lag test (cross-correlation of each trace to the mean in a quiet region) to check for *natural* jitter | Decomposes the ~98% nobody has measured; says whether re-alignment or PCA removal is worth building |
 | R6 | **Decoder upside on cached heads** (zero GPU, `head_preds_5k.npz`): Hungarian assignment over the 16×16 π matrix vs the 67.0% argmax; joint (α,β) marginalisation over the 16 slots vs per-slot dissection on ~200 traces | Raises the **worst-case** baseline bar. Not a non-worst-case step; say so in any report |
-| R7 | **Re-verify two fork-reported anomalies**: (a) substituting the *true* β for the β head lowers key z (−0.02 to −0.11); (b) C heads are below uniform (−0.09, M) yet are the structural carrier (Phase 0) | If (a) holds, Phase 0's "C is the carrier" is incomplete and Phase 2's pseudo-C training target needs rethinking before any GPU is spent |
+| R7 | **RESOLVED 2026-10-05 by T-030 S2 — (a) is FALSE, re-measured with the opposite sign.** The fork-reported "substituting the *true* β for the β head lowers key z (−0.02 to −0.11)" does **not** reproduce: oracle β **raises** median z **+3.42** (paired +3.118 ± 0.148 over 16 bytes, 16/16 bytes better, traces-to-rank-0 170 → 100) on the same cached 34-head baseline predictions. Evidence: `experiments/out/w2_decoder_results.json` → `V4_oracle_beta`, report `docs/tasks/T030-reports/S2-decoders.md` §1/§3 (decoder parity with `multilabel_predict` = 2.8e-17, so it is the same pipeline). Likely origin, hypothesis only: a β/α column mix-up — oracle **α** does give a small negative of exactly that size (−0.049 ± 0.011 nats). **(b) stands**: C heads are below uniform (−0.090 nats) and are the carrier — uniform C → median z 0.00 with all 16 bytes flat, oracle C → +15.78 with rank 0 at ~10 traces. Consequence: Phase 0's "C is the carrier" needs no rethinking on β grounds; the pseudo-C target question is still open, and the measured headroom order is C +6.28 ≫ β +3.42 > π +1.67 > α 0.00 |
 
 **R2 status: superseded, not run.** R1 showed α's raw bits are the wrong coordinates, so the
 frozen raw-bit STOP rule (per-bit < 0.55) could fire on a *correct* clustering. R3a/R8–R10 (below)
@@ -416,7 +437,7 @@ Further measurements (50k traces, interleaved split, ORACLE): adjacent band samp
 difference carries none (0.001) (`r4a_adjacent_structure.py`). Each stride-5 offset keeps ~20% of the band's one-hot excess and its best sample
 (R² 0.46–0.66) (R4a). My earlier "α lives in fine structure" hypothesis was the *opposite* of the data: α leaks as a smooth, locally redundant waveform.
 Retracted in this file: Established-Facts rows (resolution), Phase 1R table A row 2, the "resolution verdict" and the TimesNet-subsampling bullets.
-**Code bugs fixed (2026-10-04):** `LLM/band_scan.py:85` and `LLM/amp_check.py:83` (`.mean(1)` → `.mean(2)`).
+**Code bugs fixed (2026-10-04):** `LLM/band_scan.py:85` and `LLM/amp_check.py:83` (`.mean(1)` → `.mean(2)`), now one shared helper `LLM.data.block_mean` with a regression test (`LLM/tests/test_data.py`); `band_scan --block 2` gives 800 features and top-1 0.891. **Invalid stored results:** listed in `docs/2026-09-23/out/README-BLOCK-POOLING-BUG.md`, and each of the six affected JSONs carries an `_INVALID_NOTE` key. Correct numbers: `experiments/out/r4c_pooling_bug_replicate.json`.
 **Still carrying the false claim as of 2026-10-04, now corrected (see below):** `T020` (RESOL entries), `docs/notes/patch-pipeline-survey.md` lines 30–31, 210, 254, and the todo.md T31 line.
 
 **What each failure does and does not show.**
@@ -437,6 +458,22 @@ need a protocol that waits (GPAM: lr 5e-5 never moved, lr 1e-3 broke after 12 ep
 **Cheap discriminating test (GPU, ask first, ≤ 1 h):** α-only, 20k traces, no early stop, 30 epochs, three architectures (A2-style patch transformer with a
 position-aware head, TimesNet trunk, GPAM-style) on (i) the 100-sample band 800–900, then (ii) the full 15k crop. If (i) learns and (ii) does not, localisation
 is the obstacle; if neither learns, it is the protocol/architecture. This replaces G2 (patch-size sweep), which the retraction makes low-value.
+
+#### C4. Corrected direction after T-030/T-031 synthesis (2026-10-08)
+
+**New evidence from worst-case model tuning (T-031 N4b):**
+- C-loss weight 0.5 on the 137M MultiResNet is the stable adoption: two-seed mean z +9.984, spread 0.549
+- w=0.25 (single-run "gate pass") was a draw: two-seed mean z +7.447, spread 4.147, β at seed 1 under 7.5% bar
+- **Baseline (one unseeded w=1 run) at z +9.5047 is one-run evidence.** w=0.5 beats it, but a seeded w=1 replicate (T31-N4c, ~16 min) is still needed to validate the comparison
+- All six C-including runs keep 16/16 non-flat rank-0; w=0 is still 0/16; the carrier cliff sits between 0.25 and 0
+
+**Revised next actions (CPU first, GPU only after oracle swaps):**
+
+1. **Oracle head swaps on TimesNet cache** (CPU, cached `experiments/out/w3_head_preds_5k_e15resume_last.npz`): Swap in true C, true β, true α, true π one at a time and score the key recovery. If true C still leaves 0/16 rank-0 on TimesNet, the architecture cannot read C (multi-sample second-order or band finding will not fix it). If true C lifts it measurably, then C-loss weight 0.5 should be tried on TimesNet next (GPU, with `--seed`).
+
+2. **One seeded w=1 baseline replicate on 137M MultiResNet** (T31-N4c, GPU ~16 min): Compare the seeded w=1 result to the unseeded baseline (z +9.5047, 170 traces). This closes whether w=0.5's z +9.984 is a stable gain or within the w=1 noise band.
+
+3. **Park R11/R12 label-free discovery:** Do not run without a pre-registered PASS bar. R10 with oracle labels still needs 100k+ traces as a necessary condition; label-free will be weaker. Decision: after oracle swaps on TimesNet are read, decide whether to fix π (18% vs 67%) or stop the TimesNet line.
 
 #### D. Decision tree after Tier-0
 
@@ -543,6 +580,47 @@ bands); report any rank without the tie/flatness check; revive TimesNet for v2.
 
 ## Working notes / session log
 
+### 2026-10-08 — synthesis of the non-worst-case route
+
+- Written up with the worst-case and LUT routes in [`docs/grok-deep-research-2026-10-08.md`](../grok-deep-research-2026-10-08.md). No new measurement. Label-free α stays on the shuffle null; R10 remains an oracle-position information bound (~5.3×10⁻⁵ nats/trace, ~104k-trace necessary condition); R11/R12 still unrun. Uniform-π is an inference ablation, not a label-free break.
+
+### 2026-10-07 — the C-detectability contradiction flagged, and the SNR provenance re-verified
+
+- **Delivered the flag you asked for** ("Flag the T-028 contradiction regarding C detectability to the
+  task owner"). Since every session here commits under the same authorship there is no third party to
+  notify, so it went into this file: the Context bullet, two new Constraints bullets, the
+  Established-Facts caveat and a next-actions row (**N2**). The substance: the 2026-10-03 Decisions
+  entry still reads "C is invisible everywhere … **No approach in this task may assume C is detectable
+  from the trace**" with no inline retraction marker, 5 lines under the 2026-10-04 (later) entry that
+  removes it as a constraint. **Decisions are your record, so it was annotated rather than struck** —
+  N2 asks you to mark it retracted (or delete it) so a text search for "invisible" cannot surface a
+  live-sounding prohibition on the R8-based approaches.
+- **Provenance re-verified, and one error corrected.** The four Established-Facts SNR rows cited
+  `docs/snr_investigation.md`, which does not exist (already recorded in the Phase 0 log's "Citation
+  fix" note on 2026-10-03). They are now cited to the primary artifacts that do exist —
+  `GPAM/artifacts/snr_crop15k_{rm,rout,c,p}.npy`, `snr_raw1m_{rm,rout,c,p}.npy`, from the present
+  `GPAM/artifacts/C-snr-profile.py` — and read back today they reproduce every value in the table:
+  α 1.996 @ 867 (871 crop / 14,576 raw samples > 0.1), β 1.4195 @ 338 (55 / 267), C 0.0721 @ 5552
+  (**0** crop samples > 0.1; raw peak value identical @ 455552), π 0.1334 crop / 0.2085 @ 282070 raw
+  (1 / 27). **The re-read caught a real mistake: π's crop peak is at sample 5430, not 5552** — 5552 is
+  C's peak sample and had been copied into π's row. The value and both counts were right, so nothing
+  downstream of π's *magnitude* changes; the row is corrected in place.
+- **One housekeeping finding that needs you, not me:** `GPAM/artifacts/C-snr-v1.py` is **committed in
+  git and currently deleted from the working tree** (unstaged `D`, blob present in HEAD from `ca9569e`),
+  while its outputs `snr_v1crop_{r,C,S}.npy` / `snr_v1raw_*.npy` are still on disk and untracked (v1
+  calibration rows: `r` 1.2967 @ 156 crop / 12.93 @ 92661 raw; `C` 6.3110 @ 517 / 10.6551 @ 71890; `S`
+  0.0193 @ 76 / 0.0229 @ 17625, **0** samples > 0.1 in both). This session did not delete it and does
+  not know why it went; `git checkout -- GPAM/artifacts/C-snr-v1.py` restores it, so I left it alone
+  rather than silently reverting someone's work.
+- **New datum on "weak vs invisible", from T-030 S3 next door:** the fair TimesNet's C-head
+  log-gain went **backwards** with 5 more epochs of training (−0.053 → −0.073 nats) while α crossed its
+  90% bar in the same model. That is the signature of a target/loss problem rather than an
+  undertrained head (and matches T-031 W1: C is the least visible target yet takes 52.6% of the loss).
+  It does **not** test R8's slot-aligned HW(C) reading, because those heads are trained on
+  `sbox_masked` slot-indexed and no head here is trained on HW(C) — recorded as supporting evidence
+  only, not as a refutation.
+- No training, no new code, no HDF5 opened for anything but reading in this entry.
+
 ### 2026-10-04 (latest) — R4a/R4b/R4c: the resolution premise was a pooling bug
 
 Asked why TimesNet / Time-LLM / PatchTST fail. Reading the T-020 probe code before explaining, I found `.mean(1)` where `.mean(2)` was meant (`LLM/band_scan.py:85`, `LLM/amp_check.py:83`). Replicated: correct pooling gives 0.893 / 0.909 / 0.900 for block 2 / 4 / 8 vs 0.860 raw. I had relayed the "averaging kills α" number from a research fork and wrote it into this file as established; I had re-verified other numbers but not that one. R4b (nearest-class-mean readout, weak: 0.034 raw) agrees on ordering: block-mean 0.032–0.048, stride-5 0.033, adjacent difference 0.005 (chance 0.004). Analysis and retractions in C3. No GPU used.
@@ -633,7 +711,8 @@ the numbers that change the plan. Nothing was trained; no GPU; no files edited o
   clustering; it does not test clustering the oracle bands, nor higher-order band finders, nor a
   bit-wise target. Phase 1R is the cheapest way to settle that, and R2 is a hard stop gate.
 - **Not verified by me (fork-reported):** the GPAM learning-order numbers, the SNR(π) provenance and
-  floors, the 94.5% amplitude split, the true-β substitution result, the TimesNet front-end reading.
+  floors, the 94.5% amplitude split, the true-β substitution result (**later refuted — 2026-10-05,
+T-030 S2 measured oracle β raising z by +3.42; see the R7 row**), the TimesNet front-end reading.
   They are tagged F in the plan.
 - **GPU:** none used or requested. Nothing was run on the R-battery yet; it needs a go-ahead.
 
@@ -801,13 +880,14 @@ spread **exactly 0.000**. Any rank reported here must therefore carry a flatness
 | ~~R4 adjacent-difference ablation~~ | M | M | H | **DONE as R4a/b/c.** Overturned the resolution premise (C3). Per-trace/PCA-removal arms still untried, low value |
 | R5 Variance budget by source + natural clock-jitter test | M | M | M | Drift already measured (0.134 sd); still wanted for π-localisation |
 | R6 Decoders on cached heads (π Hungarian, joint α,β) | M | L | H | Raises the **worst-case** bar only; zero GPU |
-| R7 Re-verify true-β-swap anomaly | M | L | H | Demoted: C heads below uniform is now explained by per-slot HW leakage being weak and shuffled |
-| ~~R8 slot-aligned log-domain scan~~ | H | H | H | **DONE.** C visible (|z| 56.5); S/log S/w/P not first-order visible |
+| ~~R7 Re-verify true-β-swap anomaly~~ | M | L | H | **DONE 2026-10-05 (T-030 S2): (a) refuted — oracle β raises z by +3.42 on 16/16 bytes, it does not lower it. See the R7 row above for the evidence and the likely column mix-up.** (b) stands, and is now bounded from both sides (uniform C → z 0.00 flat; oracle C → +15.78) |
+| ~~R8 slot-aligned log-domain scan~~ | H | H | H | **DONE.** C visible (\|z\| 56.5); S/log S/w/P not first-order visible |
 | ~~R9/R9b corrected 3-leak product~~ | H | H | H | **DONE.** Replicated on 450k fresh traces, Stouffer +6.04 |
 | ~~R10 Bayes read of S from 3 samples~~ | H | H | H | **DONE.** 200k: 5.3e-5 nats/trace (lower bound), 16/16 slots > 0; 21× / 10× short of the 5k / 10k-trace bar |
 | **R11 Label-free π** (the load-bearing unknown): find, without π labels, which slot/time each of the 16 C-samples belongs to; first test = can a clustering of the 5552…11147 C-sample window recover `perm_index` above a shuffle null | H | H | M | PASS bar to pre-register before running. π supervised = 86.5% (GPAM), so the information exists |
 | **R12 Multi-sample second-order read**: replace one sample per leak by a linear HW(log₃ α)/HW(β) readout over their SNR bands, product with the slot C sample, re-run R10's information estimate | H | M | M | Harness exists (`r10_bayes_bound.py`); question is whether I rises above ~1e-4 nats |
 | ~~Fix the wrong α 0.49% / β 0.41% in `T024:108-111`, `patch-pipeline-survey.md:196`, `roadmap-break-ascad.md:211`~~ | M | M | H | **DONE 2026-10-04** (T024, survey and roadmap line 211 all verified on disk) |
+| **N2 (owner decision, flagged 2026-10-07): mark the 2026-10-03 "C is invisible everywhere / no approach may assume C is detectable" decision line as retracted** | H | M | H | The contradiction you asked to have flagged is *inside this file*: that sentence is still live and un-annotated in the Decisions log, 5 lines under the 2026-10-04 (later) entry that removes it as a constraint. Decisions are your record, so it was annotated in Context / Constraints / Established-Facts instead of being struck. Related housekeeping the same check turned up, both needing your call: **`GPAM/artifacts/C-snr-v1.py` is committed but deleted from the working tree right now** (unstaged `D`, blob in HEAD from `ca9569e`; its `snr_v1*_*.npy` outputs are still on disk, untracked) — restore it or confirm the deletion was intended; and `docs/snr_investigation.md` stays a phantom, so the four Established-Facts rows were re-pointed at the real artifacts `GPAM/artifacts/snr_crop15k_*.npy` / `snr_raw1m_*.npy`. That re-read also **corrected π's crop peak sample from 5552 to 5430** in the table above (the value 0.13 and the 1/27 counts were right; 5552 is C's peak sample) |
 
 ### Priority snapshot
 

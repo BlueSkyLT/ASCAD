@@ -24,7 +24,7 @@ gives **+14.0303, 16/16 at 70 traces** — so the baseline's C head *is* a carri
 uniform** on their own label (−0.0729 vs −0.0900 nats): **"C at chance" is two statements — no top-1, and no
 carrier — and only the second is load-bearing.** Controls: every model's recorded as-trained number reproduced
 exactly before interpretation (R0 gate), eight-for-eight parity with S2's baseline table, GE tie-safe cross-check
-0.000e+00 on all 64 blocks, AOD rank 0 for every ≥8/16 arm, and a **constant-trace null that reaches the +15.97
+0.000e+00 on all 64 blocks, **AOD retracted the same evening — it returns rank 255 on the working baseline and is not a control (cause isolated: an empirical prior estimated on the scored traces; the analytic uniform prior reproduces the plain ranks on all 16 bytes exactly)**, and a **constant-trace null that reaches the +15.97
 ceiling when all four heads are oracle** — which is why only within-model B3-vs-E3 comparisons are read as
 evidence about a network. **Consequences:** (i) C4's "true C lifts it ⇒ try C-loss weight 0.5 on TimesNet" is
 **flagged as not following** — an oracle swap cannot detect "cannot read C", and down-weighting C is documented
@@ -496,7 +496,7 @@ is the obstacle; if neither learns, it is the protocol/architecture. This replac
    - Single-head headroom, TimesNet `_last`: α **+0.13**, β **+0.40**, C **+14.32**, π **+0.18** z; leave-one-out loss from the +15.9685 ceiling: α 0.13, β 0.41, **C 15.89**, π 0.02. Same battery on the baseline reproduces S2 exactly (α −0.0005, β +3.4194, C +6.2800, π +1.6731; oracle α+β 12.9332/95 = W2's D1c; uniform π 3.2914/12-of-16 = S2 V10 and an independent re-confirmation of Phase 0's "π is not essential").
    - **Why `--c-loss-weight 0.5` on TimesNet is contraindicated by measurement, not taste:** down-weighting C is documented (T-031 N2/N4/N4b) to move **β/π**, never to make C readable — C's gain stayed at chance across w=1/0.5/0.25 (−0.0496/−0.1054/−0.2425) and at w=0 the carrier dies (0/16, z +0.4741). Up-weighting C is W1's contraindicated direction (C is the least visible target in the dataset). So this arm trades away the exact thing the E3 row identifies as missing. **Flagged, not overridden: if you want it anyway it is ~16 min × 2 seeds.**
    - **Consequence for the Goal:** given the slot's masked value, α/β/π are each worth ≤ +0.4 z and are unnecessary (holding out any one of them still gives 16/16; uniform π keeps 12/16). So the label-free route is not a four-head discovery problem but **one** 256-class read-out per time slot — precisely the quantity R10 bounded at 5.3e-5 nats/trace and a ≥100k-trace necessary condition.
-   - **Controls that make these numbers safe:** R0 sanity reproduced every model's own recorded as-trained number to the digit before anything was read (TimesNet −0.10659421831774765 exactly; baseline Δ 5.5e-14); repo GE agrees with the tie-safe rank at 0.000e+00 on all 64 byte-blocks; AOD median final rank 0 for every arm reaching ≥8/16; flat bytes never counted as recovery; shuffled-head nulls sit at +0.01/+0.19 z. **The most instructive control is the constant-trace null: it hits +15.97/16/16 when all four heads are oracle** (its own α gain is −8.42 nats), which proves the oracle arms measure the *decode path*, not the model — so "D0 lifts" is never evidence about a network, and only within-model B3-vs-E3 comparisons count.
+   - **Controls that make these numbers safe:** R0 sanity reproduced every model's own recorded as-trained number to the digit before anything was read (TimesNet −0.10659421831774765 exactly; baseline Δ 5.5e-14); repo GE agrees with the tie-safe rank at 0.000e+00 on all 64 byte-blocks; flat bytes never counted as recovery; (**AOD correction:** the report's AOD column was wrong — `aod_metrics` gives median rank **255** for the baseline's own working as-trained decode because `attack_prior()` subtracts an *empirical* prior estimated on the same 5,000 scored traces, up to **1.36 nats** off the true uniform value; swapping in the analytic uniform prior reproduces the plain ranks on all 16 bytes with max difference **0**. Isolated by `experiments/c4_aod_diagnosis.py`; no conclusion rests on AOD, and `w3_s3_eval.aod_metrics` must not be used for any "validated by AOD-GE" claim until fixed); shuffled-head nulls sit at +0.01/+0.19 z. **The most instructive control is the constant-trace null: it hits +15.97/16/16 when all four heads are oracle** (its own α gain is −8.42 nats), which proves the oracle arms measure the *decode path*, not the model — so "D0 lifts" is never evidence about a network, and only within-model B3-vs-E3 comparisons count.
    - **Caveat to carry, not to smooth:** with one-hot C the routing becomes almost free (E4 loses 0.02 z; even the null's garbage π reaches +15.73), because an exact slot posterior puts the true value inside a ≤16-value support for every trace. That is an artifact of the oracle construction and must not be generalised to "π doesn't matter" for real diffuse C heads, where the baseline's own uniform-π arm still keeps 12/16 at +3.29.
 
 2. **One seeded w=1 baseline replicate on 137M MultiResNet** (T31-N4c, GPU ~16 min): Compare the seeded w=1 result to the unseeded baseline (z +9.5047, 170 traces). This closes whether w=0.5's z +9.984 is a stable gain or within the w=1 noise band. **NOT RUN — it is a training run, so it waits for a go-ahead (`.grok/rules/04-ask-before-long-runs.md`); this step spent no GPU and the task's ≤2 h budget is untouched.** It is the only remaining GPU arm with decision value.
@@ -504,7 +504,31 @@ is the obstacle; if neither learns, it is the protocol/architecture. This replac
 3. **Park R11/R12 label-free discovery:** Do not run without a pre-registered PASS bar. R10 with oracle labels still needs 100k+ traces as a necessary condition; label-free will be weaker. Decision: after oracle swaps on TimesNet are read, decide whether to fix π (18% vs 67%) or stop the TimesNet line.
    - **RESOLVED 2026-10-08 by the swap battery: stop the TimesNet line for v2 rather than fix its π, and R11 stays parked.** Oracle π buys **+0.18 z** on TimesNet (and +1.67 z on the baseline, which S2 already knew), so π cannot be what rescues it; C is, and C's defect is a carrier failure no mask-free route can label. R12 is not closed by this measurement (it asks whether the slot read can be made with more samples, which the swaps do not address) and stays parked behind a pre-registered PASS bar, per this item.
 
-#### C5. Contrastive Learning Investigation (CL-0 CPU Check, Falsified 2026-10-08)
+#### C5. AOD-GE Validation Bug (T28-AOD1, registered 2026-10-08)
+
+**Finding:** The C4 report claimed "AOD rank 0 for every arm reaching ≥8/16". False. The AOD column was wrong.
+
+**Root cause:** `aod_metrics()` in `ASCAD_test_models.py` calls `attack_prior()`, which divides out an **empirical prior** estimated on the very 5,000 traces being scored (not the true uniform prior). The empirical estimate drifts up to **1.36 nats** off uniform, and the noise is hypothesis-dependent (accumulates instead of cancels).
+
+**Measurement:** `experiments/c4_aod_diagnosis.py` isolated the issue.
+- `aod_metrics` on the baseline's own as-trained decode: median rank **255** (all 16 bytes)
+- Tie-safe rank (repo default) on same array: rank **0** on 16/16 bytes
+- Swapping in analytic uniform prior: reproduces plain ranks exactly (max difference 0)
+
+**Impact:**
+- **No C4 conclusion rested on AOD.** Safe to ignore for C4 analysis.
+- **Goal names AOD-GE as validation criterion.** Cannot use `aod_metrics` for any "validated by AOD-GE" claim without a fix.
+
+**Three fix options (choose one or do not fix):**
+1. **Use analytic uniform prior in `attack_prior()`** — ASCADv2 has uniform plaintext/key by design. AOD becomes a no-op but is correct.
+2. **Use a held-out prior set** — estimate empirical prior on profiling or early attack traces, apply to later ones. Slower, more correct for real non-uniform data.
+3. **Remove AOD from validation** — use tie-safe rank (repo standard) and shuffled-trace null only. Simpler, already working.
+
+**Status:** Registered as T28-AOD1. **Not a blocker for T-028 non-worst-case work.** Corrected in C4 report, task file, INDEX, and todo. Do not act without user decision on which fix (if any).
+
+---
+
+#### C6. Contrastive Learning Investigation (CL-0 CPU Check, Falsified 2026-10-08)
 
 **Original idea (registered C5):** C4 showed TimesNet *cannot learn* C from labels but *can use* oracle C (z −0.1066 → +14.21). Could contrastive learning fix C learning via relational structure (C = α ⊗ S(p⊕k) ⊕ β)?
 
@@ -525,6 +549,13 @@ is the obstacle; if neither learns, it is the protocol/architecture. This replac
 - **Status:** Not required. Only if you want a representation-alignment diagnostic after T31-N4c.
 
 **Consequence:** Label-free C discovery is not achievable on ASCADv2 because **C is not learnable** — it's slot-indexed masked S-box, a function of the masks, not an observation. Non-worst-case bottleneck remains α (label-free band finding fails at 2% matched accuracy; necessary condition ≳100k traces per R10).
+
+#### C7. Comprehensive Synthesis & Audit Delivered (2026-10-08)
+
+Delivered formal audit and report (`T028-reports/T028-synthesis-ascadv2-break-and-compression.md` and artifact `ascadv2_break_and_model_compression_synthesis.md`) addressing the user's inquiry:
+1. **Non-worst-case verdict:** AGREE that black-box trace-to-key / mask-free recovery under standard budgets is exhausted and mathematically walled off (first-order SNR is zero; second-order mutual info is $5.3 \times 10^{-5}$ nats/trace requiring $\ge 100\text{k}$ traces; trace variance budget is 1.68% signal vs 1.29% noise; contrastive equivalence classes do not exist due to 1-key-per-trace).
+2. **Smaller worst-case multitask model verdict:** DISAGREE that compression is exhausted. The project jumped from 137M MultiResNet to 8.4M TimesNet. MultiResNet's trunk is only 7.53M parameters; its 137M size is an artifact of 34 unpooled dense heads ($12,800 \to 1024 \to 256$). TimesNet failed due to 2D-FFT Inception destroying 1D transient phase alignment, killing logit carriage ($z = +0.076\sigma$ vs MultiResNet's $+14.03\sigma$).
+3. **Overlooked & Proposed Direction:** A **Compact 1D-ResNet (15M–20M parameters)** retaining MultiResNet's 1D conv trunk, pooling feature maps before bottlenecked heads, and training with $w_C = 0.5$ (T31-N4b).
 
 #### D. Decision tree after Tier-0
 
@@ -630,6 +661,38 @@ bands); report any rank without the tie/flatness check; revive TimesNet for v2.
 - 2026-10-03: Phase 0 ablation runs BEFORE any unsupervised work, to determine which heads are essential and which can be skipped.
 
 ## Working notes / session log
+
+### 2026-10-08 — C4 addendum: my own AOD control was invalid, and the reason is a prior estimated on the scored traces
+
+- **How it surfaced:** extending `experiments/c4_oracle_swaps.py` with `--add-model` (so the carriage harness
+  could score new checkpoints for C4 item (b)) and re-running it on the baseline printed
+  `AOD A0_as_trained: median rank 255.0` — for the model this programme uses as its working reference, whose
+  as-trained decode is rank 0 on 16/16 under both the tie-safe ranker and `ASCAD_test_models.guessing_entropy`.
+  The C4 report had cited "AOD rank 0 for every arm reaching ≥8/16" as one of its controls. **That claim is
+  retracted** and corrected in the report, this file, `INDEX.md` and `todo.md`.
+- **Cause, isolated rather than assumed** (`experiments/c4_aod_diagnosis.py`, ~10 s CPU):
+  `w3_s3_eval.attack_prior()` computes log Pr(Z) for Z = S[p⊕k] **from the same 5,000 attack traces that are
+  then scored**, and `aod_metrics` subtracts it per hypothesis. Empirically it sits up to **1.36 nats** off the
+  true uniform value (≈19.5 expected samples per class at n=5,000), and because the subtracted value depends on
+  the hypothesis, that estimation noise accumulates across traces instead of averaging out — enough to invert a
+  z ≈ 9.5 separation. Substituting the analytic uniform prior `log(1/256)` reproduces the plain ranks on
+  **all 16 bytes with max absolute difference 0**. That is the expected behaviour: ASCADv2 draws plaintext and key
+  uniformly per trace, so a correctly computed AOD is a **no-op** on this dataset, and any AOD that moves the
+  ranking is measuring its own prior estimate.
+- **The oracle arms' AOD-0 rows were trivial in the other direction** — a bounded prior term cannot reorder a
+  point-mass support — so the AOD column corroborated nothing anywhere in that table. Everything the C4 verdicts
+  rest on is unaffected: R0 (each model's recorded as-trained number reproduced before interpretation), the
+  tie-safe rank with `tie_break="worst"`, the repo-GE cross-check at **0.000e+00** on all 64 byte-blocks, the
+  flat-byte rule, and the shuffled-head and constant-trace nulls.
+- **Why this is not housekeeping:** the Goal names AOD-GE as the validation step, and Phase 0 already proved that
+  `rank()` reports 0 for tied vectors. An AOD control that cannot see the difference between a working attack and
+  noise is worse than no control, because it looks like corroboration. Registered as **T28-AOD1** with three fix
+  options (analytic uniform prior / out-of-sample prior / drop AOD for v2 and say so). **Not fixed silently:**
+  `w3_s3_eval.py` is a T-030 artifact and its AOD numbers are recorded in T-030's reports, so changing it would
+  re-write results this task did not authorise.
+- **Process note worth keeping:** the defect was found by *re-using* a harness on a new input rather than by
+  re-reading the old report. Harnesses that get reused should keep their sanity gate attached to the run, not to
+  the write-up — here it was the R0-style cross-check that made the AOD row visible at all.
 
 ### 2026-10-08 — C4 item 1 run: the swap battery says the attack is one head, and TimesNet's is not fixable by C4's proposed lever
 
@@ -988,7 +1051,8 @@ spread **exactly 0.000**. Any rank reported here must therefore carry a flatness
 | ~~R10 Bayes read of S from 3 samples~~ | H | H | H | **DONE.** 200k: 5.3e-5 nats/trace (lower bound), 16/16 slots > 0; 21× / 10× short of the 5k / 10k-trace bar |
 | **R11 Label-free π** (the load-bearing unknown): find, without π labels, which slot/time each of the 16 C-samples belongs to; first test = can a clustering of the 5552…11147 C-sample window recover `perm_index` above a shuffle null | H | H | M | PASS bar to pre-register before running. π supervised = 86.5% (GPAM), so the information exists. **DEMOTE on 2026-10-08 measurement (C4 item 1): oracle π is worth +0.18 z on TimesNet and +1.67 z on the baseline, and uniform routing still leaves 12/16 non-flat rank-0 on the baseline (+3.2914, 2,900 traces). π is not the binding head in either model, so this cannot be the next spend.** Kept parked rather than deleted, because the +1.67 z is real headroom for the working model |
 | **R12 Multi-sample second-order read**: replace one sample per leak by a linear HW(log₃ α)/HW(β) readout over their SNR bands, product with the slot C sample, re-run R10's information estimate | H | M | M | Harness exists (`r10_bayes_bound.py`); question is whether I rises above ~1e-4 nats. **Still the right question after C4 item 1** — the swaps show the whole attack reduces to one slot-wise masked-value read, which is exactly what R12 tries to make denser; needs a pre-registered PASS bar before running |
-| ~~**C4 item 1: oracle head swaps on the TimesNet cache** (CPU)~~ | H | H | M | **DONE 2026-10-08, 367 s CPU, no GPU.** TimesNet: true C −0.1066 → **+14.2108, 16/16, 40 traces**; α/β/π worth +0.13/+0.40/+0.18. The discriminator is the reverse swap (true α+β+π, C left to the model): TimesNet **+0.0766 / 0-of-16** vs baseline **+14.0303 / 16-of-16 / 70 traces** — so the baseline's C head is a carrier and TimesNet's is not, *although both score below uniform on their own label*. R0 sanity reproduced every recorded number; eight-for-eight parity with S2; GE cross-check 0.000e+00; AOD rank 0 on all ≥8/16 arms. **Flag: C4's implied TimesNet w=0.5 GPU arm does not follow from this** (§C4 item 1). Report `T028-reports/C4-1-oracle-head-swaps.md` |
+| ~~**C4 item 1: oracle head swaps on the TimesNet cache** (CPU)~~ | H | H | M | **DONE 2026-10-08, 367 s CPU, no GPU.** TimesNet: true C −0.1066 → **+14.2108, 16/16, 40 traces**; α/β/π worth +0.13/+0.40/+0.18. The discriminator is the reverse swap (true α+β+π, C left to the model): TimesNet **+0.0766 / 0-of-16** vs baseline **+14.0303 / 16-of-16 / 70 traces** — so the baseline's C head is a carrier and TimesNet's is not, *although both score below uniform on their own label*. R0 sanity reproduced every recorded number; eight-for-eight parity with S2; GE cross-check 0.000e+00; flat-byte rule and nulls (**AOD later retracted as invalid here — it scores the working baseline at rank 255; see the report's controls section**) **Flag: C4's implied TimesNet w=0.5 GPU arm does not follow from this** (§C4 item 1). Report `T028-reports/C4-1-oracle-head-swaps.md` |
+| **T28-AOD1: the AOD scorer in `experiments/w3_s3_eval.py` is invalid on ASCADv2 and must be fixed before any "validated by AOD-GE" claim** | H | H | M | Found while re-running the C4 harness on the baseline (2026-10-08): `aod_metrics` reports median final rank **255** for `multiresnet_baseline / A0_as_trained` — the programme's reference working attack, scored rank 0 on 16/16 by the tie-safe ranker and by `ASCAD_test_models.guessing_entropy` on the *same* posterior array. Cause isolated by `experiments/c4_aod_diagnosis.py`: `attack_prior()` subtracts the **empirical** log Pr(Z) estimated on the same 5,000 attack traces being scored, up to **1.36 nats** off the true uniform value, and that hypothesis-dependent noise accumulates over 5,000 traces until it swamps a z≈9.5 separation. With the analytic uniform prior `log(1/256)` the scorer reproduces the plain ranks on **all 16 bytes, max absolute difference 0** — which is the correct behaviour, because ASCADv2 draws plaintext and key uniformly per trace, so a properly computed AOD is a no-op on this dataset. **Fix options (owner's call):** use the analytic uniform prior; or estimate the prior out-of-sample (profiling split); or drop AOD for v2 and say so. Not fixed silently: it is a T-030 artifact and its numbers are recorded in T-030's reports. **This is a live requirement, not housekeeping — the Goal names AOD-GE as the validation step, and Phase 0 already proved rank 0 is claimable with zero information, so the tie-safe/GE/flat controls carry the claims until AOD is sound.** |
 | **C4 item 2 = T31-N4c: seeded w=1 MultiResNet reference** (GPU, ~16 min/run; **go-ahead needed**) | H | M | M | The only remaining GPU arm with decision value: the baseline's +9.5047 / 170 traces is one **unseeded** run, so "w=0.5 (mean +9.984 / 147.5) beats the baseline" is suggested, not established. One run makes it like-for-like, two give the baseline its own variance. Not started — `.grok/rules/04-ask-before-long-runs.md` (any training run needs asking), and this task's ≤2 h GPU budget is still untouched |
 | ~~**C4 item 3: park R11/R12; decide π vs stop the TimesNet line**~~ | H | H | M | **RESOLVED 2026-10-08 by the swap battery: stop the TimesNet line for v2, do not chase its π** (oracle π buys +0.18 z there). R11 demoted, R12 still the right question but parked behind a pre-registered PASS bar |
 | ~~Fix the wrong α 0.49% / β 0.41% in `T024:108-111`, `patch-pipeline-survey.md:196`, `roadmap-break-ascad.md:211`~~ | M | M | H | **DONE 2026-10-04** (T024, survey and roadmap line 211 all verified on disk) |

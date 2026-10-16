@@ -40,10 +40,10 @@ class TokenEmbedding(nn.Module):
 
 
 class DataEmbedding(nn.Module):
-    def __init__(self, c_in, d_model, dropout=0.1, kernel_size=3):
+    def __init__(self, c_in, d_model, dropout=0.1, kernel_size=3, max_len=5000):
         super().__init__()
         self.value_embedding = TokenEmbedding(c_in=c_in, d_model=d_model, kernel_size=kernel_size)
-        self.position_embedding = PositionalEmbedding(d_model=d_model)
+        self.position_embedding = PositionalEmbedding(d_model=d_model, max_len=max_len)
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, x_mark=None):

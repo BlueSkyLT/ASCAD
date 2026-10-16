@@ -11,11 +11,21 @@ except ImportError:
     SAGEConv = None
     global_mean_pool = None
 
-GRAPH_NETWORK_TYPES = ('gcn', 'gat', 'gin', 'graphsage')
+GRAPH_NETWORK_TYPES = ('gcn', 'gat', 'gin', 'graphsage', 'seg_graphsage')
+SAMPLE_GRAPH_NETWORK_TYPES = ('gcn', 'gat', 'gin', 'graphsage')
+SEGMENT_GRAPH_NETWORK_TYPES = ('seg_graphsage',)
 
 
 def is_graph_network(network_type):
     return network_type in GRAPH_NETWORK_TYPES
+
+
+def is_sample_graph_network(network_type):
+    return network_type in SAMPLE_GRAPH_NETWORK_TYPES
+
+
+def is_segment_graph_network(network_type):
+    return network_type in SEGMENT_GRAPH_NETWORK_TYPES
 
 
 def ensure_graph_dependencies(network_type):

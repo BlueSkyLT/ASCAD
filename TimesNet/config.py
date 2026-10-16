@@ -17,3 +17,13 @@ class TimesNetConfig:
     head_hidden_dim: int | None = None
     head_hidden_dim_2: int | None = None
     head_dropout: float = 0.2
+    # Multilabel (ASCADv2): pool over time then branch heads.
+    without_permind: bool = False
+    # Simple linear heads on pooled features (True) vs MultiResNet-style BranchHead (False).
+    simple_heads: bool = True
+    # Subsample input along time before encoder (L_eff = ceil(L / stride)).
+    input_stride: int = 1
+    # 0 = global pool over time; K>0 = adaptive pool to K segments then project.
+    pool_segments: int = 0
+    # "avg" (default, checkpoint-compatible) or "max". Not a learned parameter.
+    pool_mode: str = "avg"

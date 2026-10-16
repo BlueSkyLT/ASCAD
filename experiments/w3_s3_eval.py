@@ -40,6 +40,7 @@ import numpy as np
 import torch
 
 from ASCAD_generate import AES_Sbox
+from perm_routing import apply_pi_routing
 from ASCAD_test_models import multilabel_predict, ranks_from_log_scores
 from experiments.w1_timesnet_old_head_accs import (
     head_metrics,
@@ -112,7 +113,7 @@ def median_final_rank(per_byte):
 def decode_and_measure(heads, lab, n, rank_step, router=None):
     alpha, beta, C, PI = heads
     slot_C = slot_C_posteriors(C, beta, alpha)
-    R = PI if router is None else router(PI)
+    R = apply_pi_routing(PI) if router is None else router(PI)   # T-041 default: exact marginals
     post = route_with_matrix(slot_C, R)
     per_byte = [byte_metrics(post[:, b], lab["plaintext"][:, b], lab["key"][:, b], n, rank_step)
                 for b in range(16)]

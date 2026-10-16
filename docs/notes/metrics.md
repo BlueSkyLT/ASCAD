@@ -154,6 +154,8 @@ Saved on every benchmark row:
 | `ge_n_attacks` | 100 | Number of shuffles (`0` = skip GE) |
 | `ge_seed` | 12345 | Base seed for those shuffles |
 
+**ASCADv2 shuffle routing (since 2026-10-17, T-041).** The 16 shuffle heads each guess "which byte is processed at this time slot" on their own, so together they can claim the same byte twice. Every v2 attack decoder now first converts them into the exact probabilities of a valid shuffle, in which each byte occurs once (`perm_routing.apply_pi_routing`). Measured on 7 models, this raises median z by +0.08 to +0.55 and never loses a byte. Environment variable `ASCAD_PI_ROUTING=raw` restores the old routing and reproduces every number recorded before 2026-10-17. Numbers from before and after this date are not directly comparable; say which routing a table uses.
+
 ---
 
 ## Averaging several training seeds

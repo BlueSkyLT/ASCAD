@@ -339,6 +339,9 @@ def multilabel_predict(predictions):
     predictions_permind_v = np.array(predictions_permind)
     predictions_unshuffledsbox_v = np.moveaxis(predictions_unshuffledsbox_v, [0, 1, 2], [1, 0, 2])
     predictions_permind_v = np.moveaxis(predictions_permind_v, [0, 1, 2], [1, 0, 2])
+    # T-041: route with exact permutation marginals (ASCAD_PI_ROUTING=raw restores the old routing)
+    from perm_routing import apply_pi_routing
+    predictions_permind_v = apply_pi_routing(predictions_permind_v)
     predictions_sbox = []
     print("Computing sbox probas...")
     for i in range(16):

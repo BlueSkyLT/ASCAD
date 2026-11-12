@@ -35,13 +35,13 @@ from experiments.w3_s3_eval import (  # noqa: E402
 )
 
 
-def constant_trace_heads(model_file, n_attack, n_const, device_str="cuda", batch=64):
-    """Head posteriors for n_const copies of the mean (sub_avg-adjusted) attack trace."""
+def constant_trace_heads(model_file, n_attack, n_const, device_str="cuda", batch=64, start=0):
+    """Head posteriors for n_const copies of the mean (sub_avg-adjusted) attack trace over [start, start + n_attack)."""
     import torch
 
     from MultiResNet.model import CompactMultiResNet, MultiResNet
 
-    X, _ = load_attack_split(n_attack)
+    X, _ = load_attack_split(n_attack, start=start)
     mean_path = model_file + ".mean_wf.npy"
     if os.path.exists(mean_path):
         X = X - np.load(mean_path).astype(np.float32)
@@ -51,7 +51,10 @@ def constant_trace_heads(model_file, n_attack, n_const, device_str="cuda", batch
     if sidecar.get("compact", False):
         model = CompactMultiResNet(input_dim=X.shape[1], depth=19, without_permind=False,
                                    bottleneck_dim=sidecar.get("bottleneck_dim", 512),
-                                   head_hidden_dim=sidecar.get("head_hidden_dim", 256))
+                                   head_hidden_dim=sidecar.get("head_hidden_dim", 256),
+                                   three_head=bool(sidecar.get("three_head", False)),
+                                   c_head_hidden_dim=sidecar.get("c_head_hidden_dim"),
+                                   c_head_form=sidecar.get("c_head_form", "full"))
     else:
         model = MultiResNet(input_dim=X.shape[1], depth=19, without_permind=False)
     model.load_state_dict(torch.load(model_file, map_location="cpu", weights_only=True))
@@ -72,16 +75,20 @@ def main():
     ap.add_argument("--model-file", required=True)
     ap.add_argument("--npz", required=True, help="head posteriors from w6_nochead_eval --save-npz")
     ap.add_argument("--num-traces", type=int, default=5000)
+    ap.add_argument("--attack-start", type=int, default=0, help="first attack trace (held-out check: 5000)")
     ap.add_argument("--const-traces", type=int, default=500)
     ap.add_argument("--rank-step", type=int, default=10)
     ap.add_argument("--null-perms", type=int, default=20)
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--project-c", default=None,
+                    help="bit | hw | temp:<t>: transform the constant-trace C posteriors like t039_c_projection_npz "
+                         "(pass the same-transformed --npz too)")
     ap.add_argument("--out-json", required=True)
     args = ap.parse_args()
 
     t0 = time.time()
     n = args.num_traces
-    _, lab = load_attack_split(n)
+    _, lab = load_attack_split(n, start=args.attack_start)
     z = np.load(args.npz)
     heads = head_arrays({k: np.asarray(z[k])[:n] for k in z.files})
 
@@ -91,7 +98,10 @@ def main():
     _, null, null_bytes = decode_and_measure(tuple(a[perm] for a in heads), lab, n,
                                              args.rank_step)
 
-    cp = constant_trace_heads(args.model_file, n, args.const_traces, args.device)
+    cp = constant_trace_heads(args.model_file, n, args.const_traces, args.device, start=args.attack_start)
+    if args.project_c:
+        from experiments.t039_c_projection_npz import project_c
+        cp = project_c(cp, args.project_c)
     _, const, const_bytes = decode_and_measure(head_arrays(cp), lab, args.const_traces,
                                                args.rank_step)
 
@@ -141,7 +151,7 @@ def main():
                     and aod_rank0 == 16 and pooled["shuffled_median_rank"] >= 96
                     and abs(pooled["shuffled_median_z"]) < 1.0 and pooled["const_median_rank"] >= 96)
     res = {
-        "meta": {"label": args.label, "model_file": args.model_file, "npz": args.npz,
+        "meta": {"label": args.label, "model_file": args.model_file, "npz": args.npz, "project_c": args.project_c, "attack_start": args.attack_start,
                  "n_traces": n, "const_traces": args.const_traces, "rank_step": args.rank_step,
                  "tie_break": "worst", "aod_prior": "analytic uniform",
                  "wall_s": round(time.time() - t0, 1)},

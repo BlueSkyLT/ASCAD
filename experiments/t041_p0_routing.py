@@ -137,7 +137,8 @@ def main():
         if T is not None:
             idx = (np.arange(len(R))[:, None], np.arange(N)[None, :], T)
             msg += (f" | elem {(Rv.argmax(2) == T).mean():.3f}  p(true) mean {Rv[idx].mean():.3f}"
-                    f"  |col-1| {np.abs(Rv.sum(1) - 1).mean():.3f}")
+                    f"  |col-1| {np.abs(Rv.sum(1) - 1).mean():.3f}"
+                    f"  perm {(Rv.argmax(2) == T).all(1).mean():.4f}")
         print(msg, flush=True)
 
 

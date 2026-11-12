@@ -59,13 +59,13 @@ KEYS_256 = [f"sbox_{i}_output" for i in range(16)]
 KEYS_PI = [f"permind_{i}_output" for i in range(16)]
 
 
-def collect_from_checkpoint(model_file, n, device_str="cuda", batch=64):
-    """34 head posteriors on the first n attack traces, exactly as MultiResNet/evaluate.py does it."""
+def collect_from_checkpoint(model_file, n, device_str="cuda", batch=64, start=0):
+    """34 head posteriors on attack traces [start, start + n), exactly as MultiResNet/evaluate.py does it."""
     import torch
 
     from MultiResNet.model import MultiResNet, CompactMultiResNet
 
-    X, lab = load_attack_split(n)
+    X, lab = load_attack_split(n, start=start)
     mean_path = model_file + ".mean_wf.npy"
     if os.path.exists(mean_path):
         X = X - np.load(mean_path).astype(np.float32)
@@ -82,7 +82,10 @@ def collect_from_checkpoint(model_file, n, device_str="cuda", batch=64):
         h_dim = sidecar.get("head_hidden_dim", 256)
         model = CompactMultiResNet(
             input_dim=X.shape[1], depth=19, without_permind=False,
-            bottleneck_dim=bot_dim, head_hidden_dim=h_dim
+            bottleneck_dim=bot_dim, head_hidden_dim=h_dim,
+            three_head=bool(sidecar.get("three_head", False)),
+            c_head_hidden_dim=sidecar.get("c_head_hidden_dim"),
+            c_head_form=sidecar.get("c_head_form", "full"),
         ).to(device)
     else:
         model = MultiResNet(input_dim=X.shape[1], depth=19, without_permind=False).to(device)
@@ -99,9 +102,9 @@ def collect_from_checkpoint(model_file, n, device_str="cuda", batch=64):
     return heads, lab, str(device)
 
 
-def load_npz(path, n):
+def load_npz(path, n, start=0):
     z = np.load(path)
-    _, lab = load_attack_split(n)
+    _, lab = load_attack_split(n, start=start)
     return {k: np.asarray(z[k], dtype=np.float64)[:n] for k in z.files}, lab, "cpu (cached)"
 
 
@@ -167,6 +170,8 @@ def main():
     ap.add_argument("--model-file", default="", help="checkpoint to run inference on (GPU)")
     ap.add_argument("--npz", default="", help="cached head posteriors instead of a checkpoint")
     ap.add_argument("--num-traces", type=int, default=5000)
+    ap.add_argument("--attack-start", type=int, default=0,
+                    help="first attack trace (T-039 held-out check 2026-11-01 uses 5000: traces 5000-9999)")
     ap.add_argument("--rank-step", type=int, default=10)
     ap.add_argument("--ge-attacks", type=int, default=100)
     ap.add_argument("--ge-seed", type=int, default=12345)
@@ -179,12 +184,12 @@ def main():
     t0 = time.time()
     n = args.num_traces
     if args.model_file:
-        heads, lab, device = collect_from_checkpoint(args.model_file, n)
+        heads, lab, device = collect_from_checkpoint(args.model_file, n, start=args.attack_start)
         if args.save_npz:
             np.savez_compressed(args.save_npz, **heads)
             print(f"cached head posteriors -> {args.save_npz}", flush=True)
     else:
-        heads, lab, device = load_npz(args.npz, n)
+        heads, lab, device = load_npz(args.npz, n, start=args.attack_start)
 
     missing = [k for k in ["alpha_output", "beta_output", *KEYS_256, *KEYS_PI] if k not in heads]
     if missing:
@@ -196,7 +201,7 @@ def main():
 
     tbl = decode_table(heads, lab, n, args.rank_step)
     with h5py.File(H5, "r") as f:
-        meta = f["Attack_traces/metadata"][:n]
+        meta = f["Attack_traces/metadata"][args.attack_start:args.attack_start + n]
 
     ge = {}
     for name in ("as_trained", "uniform_C", "oracle_C"):
@@ -240,7 +245,8 @@ def main():
     out = {
         "meta": {"label": args.label, "step": "T-031 T31-N2 head-quality evaluation",
                  "model_file": args.model_file or None, "npz": args.npz or None,
-                 "device": device, "n_traces": int(n), "rank_step": args.rank_step,
+                 "device": device, "n_traces": int(n), "attack_start": args.attack_start,
+                 "rank_step": args.rank_step,
                  "tie_break": "worst", "ge_attacks": args.ge_attacks, "ge_seed": args.ge_seed,
                  "eps_oracle": EPS_ORACLE, "numpy": np.__version__,
                  "git": os.popen("git -C %s rev-parse --short HEAD" % repo_root).read().strip(),

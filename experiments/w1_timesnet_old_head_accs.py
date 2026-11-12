@@ -76,12 +76,13 @@ GF = np.vectorize(multGF256, otypes=[np.uint8])  # only used for the label-algeb
 # ---------------------------------------------------------------- data
 
 
-def load_attack_split(n, path=H5):
-    """First n attack traces (float32) + the label columns and metadata S1 needs."""
+def load_attack_split(n, path=H5, start=0):
+    """Attack traces [start, start + n) (float32) + the label columns and metadata S1 needs."""
+    sl = slice(start, start + n)
     with h5py.File(path, "r") as f:
-        X = np.array(f["Attack_traces/traces"][:n], dtype=np.float32)
-        lab = f["Attack_traces/labels"][:n]
-        meta = f["Attack_traces/metadata"][:n]
+        X = np.array(f["Attack_traces/traces"][sl], dtype=np.float32)
+        lab = f["Attack_traces/labels"][sl]
+        meta = f["Attack_traces/metadata"][sl]
     out = {
         "alpha": lab["alpha_mask"].reshape(-1).astype(np.int64),
         "beta": lab["beta_mask"].reshape(-1).astype(np.int64),

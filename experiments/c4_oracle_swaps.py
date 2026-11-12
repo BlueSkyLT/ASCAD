@@ -106,6 +106,8 @@ VARIANTS = {
                              "only the 16 C heads are left to the model"),
     "E4_all_but_pi":        ({"alpha": ORACLE, "beta": ORACLE, "C": ORACLE}, False,
                              "only the routing is left to the model"),
+    "H2_oracle_ab_uniform_pi": ({"alpha": ORACLE, "beta": ORACLE, "pi": UNIFORM}, False,
+                                "true alpha and beta, no routing information; C heads as trained"),
     "F1_uniform_C":         ({"C": UNIFORM}, False, "negation: C carries nothing"),
     "F2_uniform_pi":        ({"pi": UNIFORM}, False, "negation: routing carries nothing"),
     "F3_uniform_alpha_beta": ({"alpha": UNIFORM, "beta": UNIFORM}, False,

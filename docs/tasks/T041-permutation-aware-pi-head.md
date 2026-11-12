@@ -2,7 +2,7 @@
 
 ## Status
 
-`in_progress` — registered 2026-10-17. **P0 done the same day (CPU, ~20 min): pre-registered gate FAIL, but exact permutation marginals raise z on 7/7 models (+0.08 to +0.55 z, 21–43% of oracle-π headroom).** P1/P2 re-estimated below the 40% bar; nothing further runs without a go-ahead.
+`in_progress` — registered 2026-10-17. **P1-400k CRF done 2026-10-17: G1 FAIL on both seeds (π worse: exact permutation 65–66% vs 71%), G2 PASS (Δz +0.04 / +0.08), G3 not met. Keep CE training + exact attack routing. P2-D (Σ CE + λ·D, 50k pilot) DONE: G1 PASS by the letter (π +1–3 pp), G2 FAIL (λ=1 Δz −2.4/−0.6; λ=3 attack fails; the decoder takes off later); closed.** P0 done the same day (CPU, ~20 min): pre-registered gate FAIL, but exact permutation marginals raise z on 7/7 models (+0.08 to +0.55 z, 21–43% of oracle-π headroom).** P1/P2 re-estimated below the 40% bar; nothing further runs without a go-ahead.
 
 ## Goal
 
@@ -160,7 +160,122 @@ Sinkhorn reaches the same elem as exact but barely moves p(true) (e.g. 0.412 →
 
 **Reading:** the permutation constraint is real, free information. A no-retraining exact decode recovers about a third of what knowing π would give. But oracle-π headroom is itself small (≤ +1.7 z) on every model, so no attack-time π change can be a large lever.
 
+## Pre-registration P1-400k: train with the permutation CRF (frozen 2026-10-17, before any P1 number; user: "我同意你训练B3: CRF（400k profiling trace）")
+
+**Run.**
+- Identical to the 400k reference (`scripts/run_t039_400k.sh`: Compact B h64, `--train-len 400000`, 15 epochs, RAdam 1e-4, batch 64, `--sub-avg`, C weight 0.5, decoder NLL weight 1.0, seeds 1 and 2), plus `--pi-loss crf`.
+- `--pi-loss crf` replaces the 16 per-slot π CEs with one permutation-CRF NLL (`MultiResNet/perm_crf.py`) and routes the decoder loss through the exact, differentiable permutation marginals.
+- Checkpoints `t041_crf_t400k_seed{1,2}[_last].pth`; unit `t041-p1`; script `scripts/run_t041_p1.sh`.
+- Cost: +38 ms per batch, so ≈ 480 s/epoch vs 254 s, ≈ 2 h per seed.
+
+**Comparator.** The reference 400k checkpoints, scored with the same (exact-routing) decoder:
+- s1 best: z +14.4457, 30 traces;
+- s2 best: z +14.4448, 40 traces.
+
+Measured before the run: oracle-π headroom at 400k is only +0.14 / +0.11 z (no trace gain). So **π cannot improve the 400k attack through routing**; any attack change would come from the shared trunk.
+
+**Gates** (best checkpoints, attack traces 0–5k, exact routing, same seed vs same seed):
+- **G1 π quality (primary, prior ≈ 60%).** Both seeds: mean μ(true byte) **and** exact-permutation recovery (Hungarian MAP) higher than the reference.
+- **G2 attack non-inferiority.** Both seeds: 16/16 non-flat rank-0, works_v2 PASS, median z ≥ reference − 0.3.
+- **G3 attack gain (secondary, prior ≤ 10%).** Median z ≥ reference + 0.5 on both seeds. Given the π headroom, a pass would be attributed to the trunk and needs a follow-up.
+- **Reported, not gated:**
+  - α / β / C head quality vs the reference (interference check);
+  - α top-1 on the attack set ≥ 0.99 (the R1@300k collapse check);
+  - val π CRF NLL per epoch;
+  - wall time.
+
+## Results P1-400k (DONE 2026-10-17 09:27; both seeds)
+
+**Seed 1** (best = epoch 8; 15 epochs at 457 s/epoch, 1 h 55 min). Attack traces 0–5k, exact routing for both models.
+
+| | ref 400k s1 best | **CRF 400k s1 best** | CRF s1 last |
+|---|---|---|---|
+| median z / traces | +14.4457 / 30 | **+14.4866 / 35** | +14.2721 / 40 |
+| works_v2 | PASS | PASS | PASS |
+| oracle-π z (B4) | +14.5844 | +14.5307 | +14.4317 |
+| uniform-π z / traces (F2) | +8.29 / 465 | +8.34 / 365 | +7.80 / 495 |
+| **mean μ(true byte)** | **0.9475** | 0.9214 | — |
+| **exact permutation (MAP)** | **0.7144** | 0.6554 | — |
+| element (MAP) / row argmax | 0.954 / 0.911 | 0.941 / 0.812 | — / 0.805 |
+| α top-1 | 0.9994 | 0.9988 | 0.9978 |
+| β top-1 / gain | 0.2328 / 2.985 | 0.2352 / 2.950 | 0.2412 / 2.700 |
+| C mean gain | 0.390 | 0.406 | 0.315 |
+
+Validation curves vs the reference at the same epoch: β top-1 and decoder NLL lead at every epoch (decoder 86.24 at ep8 vs 86.57; best 86.23 vs 86.43). Row-argmax π is lower throughout (0.83 vs 0.92), as expected for CRF-trained rows.
+
+**Gate status after seed 1:**
+- **G1 FAIL**, already decided because G1 needs both seeds. CRF π is *worse* on the attack set under exact routing: μ(true) 0.921 vs 0.948, exact permutation 65.5% vs 71.4%.
+- **G2 PASS on s1:** 16/16, works_v2, Δz +0.04.
+- **G3 not met on s1:** Δz +0.04 < +0.5.
+- α shows no collapse (0.9988).
+
+**Seed 2** (pipeline finished 09:27). Same scoring.
+
+| | ref 400k s2 best | **CRF 400k s2 best** | CRF s2 last |
+|---|---|---|---|
+| median z / traces | +14.4448 / 40 | **+14.5206 / 40** | +14.3462 / 40 |
+| works_v2 | PASS | PASS | PASS |
+| oracle-π z (B4) | +14.5580 | +14.6175 | +14.4638 |
+| uniform-π z / traces (F2) | +8.03 / 400 | +8.45 / 355 | +7.77 / 390 |
+| **mean μ(true byte)** | **0.945** | 0.922 | — |
+| **exact permutation (MAP)** | **0.7066** | 0.6644 | — |
+| element (MAP) / row argmax | 0.953 / 0.906 | 0.943 / 0.820 | — / 0.811 |
+| α top-1 | 0.998 | 0.9992 | 0.9984 |
+| β top-1 / gain | 0.2344 / 3.031 | 0.2546 / 3.068 | 0.2472 / 2.769 |
+| C mean gain | 0.383 | 0.405 | 0.299 |
+
+**Final gates (both seeds):**
+- **G1 FAIL**, replicated: μ(true) 0.921 / 0.922 vs 0.948 / 0.945; exact permutation 65.5% / 66.4% vs 71.4% / 70.7%.
+- **G2 PASS:** 16/16, works_v2 on both; Δz +0.04 / +0.08.
+- **G3 not met:** Δz +0.04 / +0.08 < +0.5.
+- Side observation, within noise and not gated: C gain +0.016 / +0.022 and uniform-π z +0.05 / +0.42 above the reference on both seeds; β mixed (−0.04 / +0.04 nats). A slightly better trunk, a worse π head.
+
+**Reading (provisional, both seeds agree):** the reference recipe (independent CE training + exact decoding at attack time) beats training the joint permutation model. A plausible mechanism, not tested: the CRF gradient μ − one-hot vanishes for a slot once the other slots pin the permutation ("explaining away"). Each π row therefore gets less training signal than under CE, which keeps pushing every row to be sharp, and that redundancy is what survives the attack-set shift. The CRF gains on validation β / decoder NLL do not carry to the attack set (β gain 2.95 vs 2.99).
+
+**Identity behind P1 (checked numerically to 1e-14):** Σ_s CE_π[s] = L_CRF + D, with D = Σ_s logsumexp_b L[s,b] − log perm(exp L) = −log P_indep(the 16 independent rows draw a valid permutation) ≥ 0. dD/dL = softmax_row − μ. The reference therefore already contains L_CRF; P1 removed only D, the term that makes each row agree on its own with the joint marginal μ. P1 says: D weight 1 (reference) gives better π than D weight 0 (CRF). A mixed CE + λ·CRF = (1+λ)L_CRF + D lies between the two (D relative weight 1/(1+λ)), so it is expected to land between them, not above the reference (≈15%; below the bar, not run).
+
+## Pre-registration P2-D: CE + λ·D, 50k pilot (frozen 2026-10-17, before any P2 number; user: "CE + λ·D（λ > 1）更meaningful。可以试试吗？")
+
+- **Change:** π objective = Σ CE_π + λ·D (= L_CRF + (1+λ)·D), `train.py --pi-d-extra λ`. Everything else = the E6 R0 50k recipe (34 heads, all labels, C weight 0.5, decoder weight 1.0 with row-softmax routing, 15 epochs). Smoke test: D = 13.68 at init ≈ 16 ln16 − ln 16! = 13.7.
+- **Arms:** λ ∈ {1, 3} (D weight 2, 4) × seeds {1, 2}; references R0 50k s1/s2, same seed. Exact routing at attack time for all. `scripts/run_t041_p2.sh` → `experiments/out/t041_p2/`.
+- **Why 50k first:** after exact routing, 50k still has +0.62 / +0.69 z oracle-π headroom (R0 s1/s2); at 400k it is ≤ +0.14 z. Runs take ~8 min each, versus ~2 h at 400k.
+- **G1 π quality (primary, prior ≈ 45%).** For at least one λ, on both seeds: mean μ(true byte) **and** exact-permutation recovery (Hungarian MAP) higher than R0 of the same seed.
+- **G2 attack (secondary, prior ≈ 20%).** For the same λ, on both seeds: median z ≥ R0 + 0.3, 16/16 non-flat rank-0, and works_v2 PASS.
+- **Guard:** α top-1 must not drop more than 0.01 below R0.
+- **Follow-up:** only if G1 passes, propose the best λ at 400k (≈ 4 h; separate go-ahead).
+
+## Results P2-D (DONE 2026-10-17 17:50; `experiments/out/t041_p2/`)
+
+Attack traces 0–5k, exact routing, best checkpoints; R0 = E6 R0 50k same seed.
+
+| | R0 s1 | λ=1 s1 | λ=3 s1 | R0 s2 | λ=1 s2 | λ=3 s2 |
+|---|---|---|---|---|---|---|
+| median z / traces | **+11.36 / 125** | +8.94 / 275 | −0.01 / — (0/16) | **+10.72 / 145** | +10.09 / 125 | +0.69 / 650 (1/16) |
+| works_v2 | PASS | PASS | **FAIL** | PASS | PASS | **FAIL** |
+| oracle-π z (B4) | +11.98 | +9.92 | +0.35 | +11.41 | +11.04 | +0.48 |
+| mean μ(true byte) | 0.771 | 0.785 | 0.780 | 0.755 | 0.761 | 0.767 |
+| exact permutation (MAP) | 0.273 | 0.294 | 0.301 | 0.261 | 0.270 | 0.290 |
+| α top-1 | 0.9994 | 1.0000 | 1.0000 | 0.9992 | 0.9988 | 0.9996 |
+| β top-1 / gain | 0.081 / 1.73 | 0.068 / 1.62 | 0.041 / 1.18 | 0.063 / 1.60 | 0.060 / 1.62 | 0.034 / 1.18 |
+| C mean gain | −0.021 | −0.092 | −0.106 | −0.036 | −0.033 | −0.116 |
+
+**Gates:**
+- **G1 PASS by the letter (both λ, both seeds)**, but small: μ +0.006 to +0.014, exact permutation +0.9 to +2.9 pp.
+- **G2 FAIL:** Δz −2.42 / −0.63 (λ=1), −11.4 / −10.0 (λ=3).
+- Guard α: OK.
+
+**Diagnosis.** The loss is in the trunk, not in π. Oracle π does not rescue λ=3 (z +0.35 / +0.48), so π routing is not the cause. At 50k, R0's decoder NLL leaves its uniform value 88.72 only at epoch 11. With λ=1 it leaves at epoch 14; with λ=3 it never leaves within 15 epochs (88.75 at the end). β and C learn later too. D (≈13.7 at init, ×λ) competes for the shared trunk early on. A likely mechanism (untested) is the global grad-norm clip at 1.0: a large D gradient takes the clip budget and slows every other head. 50k sits on a phase transition near the end of training, so any delay costs a lot.
+
+**Decision.** P2-D is closed and not followed at 400k, although the pre-registration allowed it after G1:
+- the π gain is ≤ +3 pp;
+- the 400k oracle-π headroom is ≤ +0.14 z;
+- the attack-cost risk was just shown.
+
+Estimated P(400k is useful) < 20%, below the bar. The result for the paper is that π structure helps at attack time (exact marginals) and not as a training loss: neither CRF (D weight 0) nor extra D (weight 2, 4) beats plain CE (weight 1) on the attack.
+
 ## Decisions
+
+- **2026-10-17 (user: "我同意你训练B3: CRF（400k profiling trace）"): P1 runs at 400k, not 50k.** The user chose the paper's operating point. Consequence, stated before launch: the 400k oracle-π headroom is +0.11–0.14 z, so the primary gate is π quality (G1), with attack non-inferiority (G2). Code: `MultiResNet/perm_crf.py`, which passes a brute-force check (3.6e-15), log 16! at uniform, a double-backward gradcheck, and matches the attack-time DP in float32 to 2.9e-6. `train.py --pi-loss crf` and `decoder_loss.head_probs(pi_routing="crf")` were added; the default `ce` path is unchanged (smoke: CE − CRF initial loss gap = 16 ln16 − ln 16! as expected). Launched 2026-10-17 in unit `t041-p1`.
 
 - **2026-10-17 (user: "把精确边缘概率作为默认的攻击路由"): exact permutation marginals are the default attack routing.**
   - Implemented in `perm_routing.py` (torch, CUDA if available: 5,000 traces in 0.6 s; equals brute force to 4e-16 and the P0 numpy version to 3e-14) and wired into the shared decoders:
@@ -190,6 +305,8 @@ Sinkhorn reaches the same elem as exact but barely moves p(true) (e.g. 0.412 →
 | ~~P0 inference-only comparison~~ | M | L | H | **DONE 2026-10-17: gate FAIL; exact marginals +z on 7/7 models, ≤ +0.55 z** |
 | ~~Adopt exact π marginals as the default attack routing~~ | M | M | H | **DONE 2026-10-17** (`perm_routing.py`; `ASCAD_PI_ROUTING=raw` for old numbers) |
 | P1 B3 CRF loss at 50k | M | L | M | GPU ~16 min; re-estimated ≈20% for the +1 z gate (P0 already takes ~1/3 of the oracle headroom, so P1 must close nearly all of the remaining +0.5–1.2 z) — below the bar |
+| ~~P2-D Σ CE + λ·D at 50k~~ | M | L | M | **DONE 2026-10-17: G1 PASS (small), G2 FAIL; closed, no 400k follow-up** |
+| CE + λ·CRF mix at 400k | L | L | M | ≈15%: interpolates between the measured D=1 (ref) and D=0 (CRF) points, and 400k oracle-π headroom is ≤ +0.14 z anyway — below bar |
 | P2 R1 50k with permutation-normalised routing | M | L | M | ≈30%; below bar |
 
 ### Priority snapshot

@@ -1,0 +1,23 @@
+ASCADv2 combines affine masking with shuffling, and its reference attack -- a 137.4M-parameter
+multi-task residual network (MultiResNetSCA-1) -- recovers the full AES key in about 60 traces when
+mask and permutation labels are available during profiling. We show that 94.5\% of that network's
+parameters sit in 34 dense classification heads that read one flattened feature vector, while the
+convolutional trunk that actually extracts leakage holds only 7.53M. Replacing each head by a slim,
+unshared projection gives a 15.65M-parameter network (8.8$\times$ smaller) that reaches the same
+number of traces as the original paper (60, guessing entropy below 1 on all 16 bytes over 500
+attacks), improves on a same-pipeline reproduction of the 137.4M model (75 traces), and degrades far less
+when the last instead of the best checkpoint is used (70--75 vs.\ 135--160 traces, two seeds each).
+Under identical data, exposure, preprocessing, attack set and decoder, a long-range transformer
+(GPAM) needs 9$\times$ more traces on the same 15k-sample input (19$\times$ without the
+preprocessing).
+Oracle head swaps locate these differences: the masked S-box head, whose top-1 accuracy is barely above
+chance (1.5\%), is the only carrier of key information -- with the true masked values every model reaches
+the same score -- and in our experiments a shared dense bottleneck extinguished it.
+Finally, a label-ablation ladder shows that a differentiable affine decoder used as a training loss
+can replace the cross-entropy of the additive-mask head (a loss, not information, since the
+masked values determine it), and that with both masks still labelled it trains the masked S-box heads
+without any masked-value or permutation label, at the cost of roughly 30$\times$ more attack traces;
+we state which ladder cells remain open. We release code, checkpoints and the evaluation controls, and report every
+trace count under explicitly defined metrics, which we show can differ by a factor of almost five for the
+same model.
+

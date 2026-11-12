@@ -1,0 +1,59 @@
+\section{Results}
+\label{sec:results}
+
+\subsection{Reproducing MultiResNetSCA-1}
+Table~\ref{tab:heads} compares our reproduction with Table~2 of~\cite{MS23}. The four head
+accuracies agree to within two points ($\alpha$ 99.94 vs.\ 99.2, $\beta$ 19.42 vs.\ 21.1, $C$ 1.51
+vs.\ 1.6, $\pi$ 88.77 vs.\ 88.9\,\%), so the residual-network rows below are a faithful same-pipeline
+reference, not a weakened baseline.
+
+\begin{table}[t]
+\centering
+\caption{Test accuracy of each head on 5,000 attack traces ($C$ and $\pi$: mean over the 16 heads;
+$C$ gain: mean log-likelihood of the true label minus that of a uniform guess).}
+\label{tab:heads}
+\resizebox{\linewidth}{!}{\input{tables/head_accuracy}}
+\end{table}
+
+\subsection{Full-key recovery}
+Table~\ref{tab:main} reports every model on the same 5,000 traces with the decoder of
+Eq.~\eqref{eq:decode}. Under the metric of~\cite{MS23} (GE$<1$ on all bytes, 500 attacks),
+CompactMultiResNet needs 60 traces with both seeds -- the figure reported for MultiResNetSCA-1
+in~\cite{MS23} -- and our 137.4M reproduction needs 75, also with both seeds. We therefore claim parity with the published
+attack at 8.8$\times$ fewer parameters and a 1.25$\times$ improvement over a same-pipeline
+reproduction, not a new trace record.
+
+\begin{table}[t]
+\centering
+\caption{Full-key recovery on 5,000 ASCADv2 attack traces, 400k profiling traces, independent
+permutation heads. Metrics as defined in Section~\ref{sec:metrics}; GE columns over 500 attacks.}
+\label{tab:main}
+\resizebox{\linewidth}{!}{\input{tables/main_results}}
+\end{table}
+
+\paragraph{Architecture or losses?} CompactMultiResNet is trained with $w_C=0.5$ and $\Ldec$. Giving
+the 137.4M network the same two losses does not help it (GE$<1$ 80 vs.\ 75 traces, median $z$
++14.23 vs.\ +14.21); conversely, CompactMultiResNet trained \emph{without} them needs the same 60
+traces (GE$=0$ 150). At 400k profiling traces the gap to the 137.4M network is therefore due to the
+architecture, not to the two losses (one seed per ablation row).
+
+\subsection{Robustness to checkpoint choice}
+With both seeds the 137.4M network reaches its lowest validation loss at epoch 4 and then overfits
+(seed 1: summed validation cross-entropy of the 34 heads 89.7 $\to$ 104.0 nats at epoch 15). Its last checkpoints need 160 and 135 traces (GE$<1$), and
+their $C$ heads score \emph{below} a uniform guess on their own labels ($-0.48$ and $-0.40$ nats). With the same losses as
+CompactMultiResNet it degrades in the same way. CompactMultiResNet's last checkpoints need 70 and 75
+traces (plain: 70), and their $C$ gains stay positive (+0.31 for seed 1). This is consistent with the
+excess head capacity being spent on memorising the profiling set.
+
+
+\subsection{A long-range transformer at equal budget}
+GPAM was designed for raw 1M-sample traces~\cite{GPAM}; we evaluate it on the 15k extract because
+that is the input every other row uses. With the published target learning rate it stays near chance
+for 30 epochs and ends with $\alpha$ at 52\% and $C$ at chance: no byte is recovered. With a learning
+rate of $10^{-3}$ and CompactMultiResNet's exposure it recovers all 16 bytes but needs 1,145 traces
+(GE$<1$), about 19$\times$ more. With the residual networks' mean-trace subtraction, i.e.\ the
+same preprocessing as every other row, it needs 550 (9$\times$ more; median $z$ +10.28 vs.\
++8.65). Its validation loss was
+still decreasing at the end of training, so these are budget-matched rather than converged numbers.
+On raw traces~\cite{GPAM} reports about 80 traces; our reproduction of that setting needed 600
+\todo{cite T-019 protocol in appendix}.

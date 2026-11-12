@@ -1,0 +1,115 @@
+\section{How Many Labels Does the Worst Case Need?}
+\label{sec:ladder}
+
+The decoder loss $\Ldec$ only needs the unmasked $S_i$, which a non-worst-case attacker also knows.
+It therefore lets us remove the cross-entropy of one mask head at a time while keeping a training
+signal for that head. We stress what this does \emph{not} do: the dropped head's label is still
+loaded, and because $C_j = \alpha\otimes S_{\pi(j)}\oplus\beta$ the retained labels determine it. In fact
+the 16 $C$ values together with $S$ fix $(\alpha,\beta)$ uniquely, except for rare degenerate $S$ (e.g.\ all
+bytes equal) (and $\pi$ up to slots with
+equal $S$), so every rung that keeps the $C$ labels removes a loss, not information. The informationally
+clean rungs drop $C$ together with at least one of $\alpha,\beta,\pi$ (and, last, all mask labels).
+
+\paragraph{The first informationally clean rung: $C$ and $\pi$ unlabelled.}
+We train with $\alpha$ and $\beta$ cross-entropy plus $\Ldec$ and give no $C$ or $\pi$ loss (RC$\pi$; 300k
+profiling traces, two seeds, the model and attack of the other rows). At the epoch with the lowest
+validation loss (epoch~6 in both seeds) the attack recovers all 16 key bytes: median traces-to-rank-0 over
+bytes (one attack ordering) is 1060 and 605, and the full-key guessing entropy over 500 attack orderings
+(MS23's metric) falls below one after 2250 traces (seed~1; seed~2 not computed). The fully labelled model on the
+same data needs 45 and 50 traces (one ordering) and 80 traces (500 orderings), so the clean rung costs roughly
+30$\times$ in traces (2250 vs.\ 80 at GE$<1$). The shuffled-prediction and constant-trace controls stay at chance. Three
+limits belong with the result. (i)~$\alpha$ and $\beta$ remain labelled, so this is not a non-worst-case
+attack. (ii)~Neither $C$ nor $\pi$ is learned as a label: the $C$ heads sit at chance top-1 and the $\pi$
+heads at chance. The $C$ heads do put more probability on the 16 values $\{C_j\}$ present in a trace than
+on random values (log-ratio to uniform $-0.09$ vs.\ $-0.12$ nats), but no more on their own slot's value than
+on another slot's, so they encode the unordered set. The untrained $\pi$ heads are nevertheless confident,
+and decoding with uniform routing instead of their output is faster (1060 $\to$ 630 and 605 $\to$ 430
+traces), which motivates RC$\pi$-U below. (iii)~The
+attack works only at early stopping: the checkpoint after 15 epochs recovers 5/16 and 4/16 bytes.
+
+\subsection{What the decoder loss teaches an unlabelled $C$ head}
+\label{sec:ladder-theory}
+Limit~(ii) follows from the form of $\Ldec$, and so does a smaller model. Fix one trace $x$ and write
+$P_\alpha,P_\beta,P_{C_j}$ for the head softmaxes and $R_{j,i}$ for the weight with which slot $j$ is
+routed to byte $i$ (in Eq.~\eqref{eq:decode}, $R_{j,i}=f_{\pi_j}(i\mid x)$). The loss is
+$\Ldec(x) = -\sum_{i}\log\big(q_i(S_i)/\sum_v q_i(v)\big)$ with
+\begin{equation}
+  q_i(v) = \sum_j R_{j,i}\sum_{a\neq0}\sum_{d} P_\alpha(a)\,P_\beta(d)\,P_{C_j}(a\otimes v\oplus d),
+  \label{eq:ldec}
+\end{equation}
+where we drop the $\dot\alpha=0$ term, which the network never outputs with noticeable mass. For $a\neq0$
+the map $v\mapsto a\otimes v\oplus d$ is a bijection of $\GF$, so $\sum_v q_i(v)=\sum_j R_{j,i}$. This is
+1 for uniform routing (and for exact permutation marginals), where $\Ldec(x)=-\sum_{i=0}^{15}\log q_i(S_i)$;
+independent per-slot softmaxes need the normaliser.
+The code evaluates it as $U_j=P_{C_j}\circledast P_\beta$ (XOR convolution by a Walsh--Hadamard transform)
+followed by $q_i(v)=\sum_j R_{j,i}\sum_a P_\alpha(a)\,U_j(a\otimes v)$.
+
+\paragraph{Uniform routing: one $C$ head is enough.}
+With $R_{j,i}=1/16$ (RC$\pi$-U), $q_i$ is linear in the $C$ heads and depends on them only through
+$\bar P_C=\frac1{16}\sum_j P_{C_j}$; it is also the same function $q$ for every byte $i$. A single softmax
+head can represent any $\bar P_C$, so we train a \emph{three-head} model: the trunk of
+Section~\ref{sec:params}, heads for $\alpha$, $\beta$ and one $C$, no permutation heads (8,264,096
+parameters). At 300k profiling traces with two seeds it recovers all 16 bytes at the best checkpoint; full-key
+GE$<1$ over 500 orderings is reached after 2730 and 3490 traces, against 2370 and 2555 for RC$\pi$-U with 16
+$C$ heads, and the mean per-trace margin of the true key byte over wrong ones is 0.0123 nats in both seeds
+(RC$\pi$-U: 0.0134 and 0.0122; standard error per byte about 0.002). The two are within seed spread.
+
+\paragraph{The optimum is the set of masked values.}
+Suppose the mask heads are exact, $P_\alpha=\delta_\alpha$ and $P_\beta=\delta_\beta$. Then
+$q(S_i)=\bar P_C(\alpha\otimes S_i\oplus\beta)$, and $\{\alpha\otimes S_i\oplus\beta\}_i$ is the multiset
+$\{C_j\}_j$ of Eq.~\eqref{eq:masked} with the order lost. Hence
+\begin{equation}
+  \Ldec(x) = -\sum_{j=0}^{15}\log \bar P_C(C_j)
+  = 16\,\mathrm{H}\big(\mu_x,\bar P_C\big),\qquad \mu_x(c)=\tfrac{1}{16}\,\#\{j: C_j=c\},
+\end{equation}
+a cross-entropy against the empirical distribution of the 16 masked values, minimised by $\bar P_C=\mu_x$.
+No slot order enters: $S_i$ is indexed by byte, and with uniform routing nothing in the loss ties a byte to
+a time position. This is limit~(ii). For general mask heads, the gradient with respect to the logits $z$
+of the single $C$ head is
+\begin{equation}
+  \begin{gathered}
+  \frac{\partial\Ldec}{\partial z_c} = 16\big(P_C(c)-\bar\rho(c)\big),\qquad
+  \bar\rho(c)=\frac1{16}\sum_i\frac{w_i(c)\,P_C(c)}{q(S_i)},\\
+  w_i(c)=\sum_{a\neq0} P_\alpha(a)\,P_\beta\big(c\oplus a\otimes S_i\big),
+  \end{gathered}
+\end{equation}
+so the $C$ head is trained by cross-entropy towards a soft label $\bar\rho$. This label is the posterior of
+the masked value given the true $S_i$, the current mask predictions and the head's own prior, which is one
+expectation--maximisation step per trace.
+
+\paragraph{Why the masks need labels.}
+If $P_\beta$ is uniform, then $U=\bar P_C\circledast P_\beta$ is uniform for every $\bar P_C$, $q\equiv1/256$,
+and the $C$ and $\alpha$ heads receive no gradient from $\Ldec$. Symmetrically, a uniform $C$ head gives no
+gradient to $\alpha$ and $\beta$, so the point where $\beta$ and $C$ are both uniform is stationary with exactly
+zero gradient. If $P_\alpha$ is uniform on $\GF^\ast$, then $w_i(c)=\frac{1}{255}(1-P_\beta(c))$ for $S_i\neq0$:
+the gradient no longer depends on $S$ and carries no key information. Random initialisation starts close to
+all three cases. Empirically, a $\beta$ cross-entropy in the first three epochs is enough to leave the
+saddle (both seeds pass), whereas $\alpha$ must stay labelled: when its cross-entropy is also switched off
+after epoch~3, $\alpha$ validation top-1 drops from 99.99\% to 0.5\% (chance 0.39\%) within one epoch and no byte is recovered.
+
+\paragraph{Attack.}
+The attack evaluates the same $q$ on each attack trace $x_t$ with only $p_t$ known,
+$q_t(v)=\sum_{a\neq0}\sum_d P_\alpha(a\mid x_t)P_\beta(d\mid x_t)P_C(a\otimes v\oplus d\mid x_t)$, which is
+Eq.~\eqref{eq:decode} with $f_{\pi_j}(i)=1/16$. It then scores
+$s_i(\dot k)=\sum_t\log q_t(\Sbox[p_{t,i}\oplus\dot k])$ for each byte independently. The 16 bytes share the
+distribution $q_t$ and differ only through $p_{t,i}$. Under the true hypothesis, $q_t$ is evaluated at the
+value one slot actually processed. Because the decoder cannot tell which slot that was, that slot's evidence
+is averaged with 15 slots holding unrelated values. As a heuristic, if slot $j$ contributes a likelihood ratio
+$\ell_j(v)$, then $q_t(v)\approx\frac1{256}\cdot\frac1{16}\sum_j\ell_j(v)$ and the expected per-trace margin is
+about $\frac1{16}\mathbb E[\ell_{\mathrm{own}}-1]$ rather than $\mathbb E[\log\ell_{\mathrm{own}}]$. This dilution
+is the price of an unlabelled $\pi$. The measured 0.0123 nats per trace is consistent with it, and so are the
+34--44 times more traces than the labelled model needs on the same data (80 traces at 300k).
+
+\todo{insert the E6 ladder from T-039 with seeds: R0 (all labels + $\Ldec$, 50k: 147.5 traces);
+R2 (no $\beta$ \emph{loss}; 300k, one seed: 16/16, MTD1 40 vs.\ 50/55 fully labelled; 50k: 16/16 on both seeds, 130 / 415 traces vs.\ 175 / 510 fully
+labelled; a same-seed re-run gave 335, so report the spread and say ``comparable'', not ``better'');
+R1 (no $\pi$ loss; fails at 50k, learnable at 300k on both seeds, attack outcome split); the $\alpha$
+cliff of E3 (0/16 with 1k, 5k, 20k mask-labelled traces, 16/16 at 50k; the unlabelled traces were
+discarded, so label count and trace count change together). Explain the zero-gradient saddle when
+two shares are uniform (T-031 N1 identity). Open cells: R3 ($\alpha$ loss, loss-only like R1/R2), and
+the clean ones R4 ($\beta$ and $C$), $\alpha$+$C$, R5 (all) -- fill in or mark \emph{not run} (T-039 E6-A);
+RC$\pi$ at 400k; the cliff location and labelled-$N$ plus $S$-only traces on top of RC$\pi$ (E6-B).}
+
+Within the scope above, the remaining distance to the non-worst-case setting is learning the mask
+shares from $S$ alone, which we have not shown possible; we make no claim about it, and the negative
+results of~\cite{ReallyBroken} for the attack claimed in~\cite{Scoop} are not contradicted.

@@ -1,0 +1,15 @@
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Worst-case attacks on ASCADv2.} MS23~\cite{MS23} introduced the dataset and the
+multi-task attack we build on, following the multi-label approach of~\cite{Maghrebi20}.
+OvC~\cite{OvC} reports TGE$_0$ 47 with randomness labels. GPAM~\cite{GPAM} trains a patch
+transformer with gated attention on the raw 1M-sample traces and reports full-key GE$<1$ in about 80
+traces. We found no newer worst-case full-key result on ASCADv2 \todo{manual Google Scholar pass}.
+
+\paragraph{Other settings.} Marquet and Oswald~\cite{MarquetOswald24} use multi-task learning without
+mask labels but with shuffling disabled; Wu et al.~\cite{WPP23} and Karayalcin et al.~\cite{DDPM24}
+mount non-profiled collision attacks, again without shuffling. Scoop~\cite{Scoop} claimed the first
+non-worst-case attack, which~\cite{ReallyBroken} showed to be a false positive. Gammell and
+Roy~\cite{GammellRoy26} give a plain transformer for full-key attacks on uncropped ASCADv1 and
+CHES-CTF traces.

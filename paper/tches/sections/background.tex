@@ -1,0 +1,50 @@
+\section{Background}
+\label{sec:background}
+
+\subsection{ASCADv2}
+The public ASCADv2 campaign contains 800k traces of 1M samples each, acquired on an STM32F303 with
+a random key and plaintext per encryption~\cite{MS23}. We use the official extracted set, which
+concatenates two raw windows into 15,000 samples, with 500k profiling and 10k attack traces. The
+implementation computes, for each processing slot $j$, the masked S-box output
+\begin{equation}
+  C_j = \alpha \otimes \Sbox\big[p_{\pi(j)} \oplus k_{\pi(j)}\big] \oplus \beta,
+  \label{eq:masked}
+\end{equation}
+where $\otimes$ is multiplication in $\GF$ and $\pi$ is a random permutation of the 16 bytes.
+
+\subsection{Threat model}
+We work in the worst-case setting of~\cite{MS23}: during profiling, $\alpha$, $\beta$, $C_j$ and the
+permutation indices are known; during the attack only plaintexts are known and every quantity is
+predicted from the trace. Keys vary per trace in the attack set; as in~\cite{MS23} we simulate a
+fixed all-zero key by replacing the plaintext with $p\oplus k$, so the correct hypothesis of every byte is
+$\dot k=0$.
+
+\subsection{Multi-task attack and decoding}
+A multi-task network outputs $f_\alpha$, $f_\beta$, $f_{C_j}$ and $f_{\pi_j}$. For key byte $i$
+and hypothesis $\dot s=\Sbox[p_i\oplus \dot k]$ the score is~\cite[Eq.~12]{MS23}
+\begin{equation}
+  f_{s_i}(\dot s\mid x) = \sum_j \sum_{\dot\alpha}\sum_{\dot\beta}
+    f_{C_j}(\dot\alpha\otimes\dot s\oplus\dot\beta\mid x)\,f_\alpha(\dot\alpha\mid x)\,
+    f_\beta(\dot\beta\mid x)\,f_{\pi_j}(i\mid x),
+  \label{eq:decode}
+\end{equation}
+and log-scores are summed over attack traces. All results in the main text use this decoder
+(independent permutation heads). \todo{exact permutation marginals (T-041) as a secondary column in
+the appendix}
+
+\subsection{Metrics}
+\label{sec:metrics}
+Let $r_i(n)$ be the rank of the correct byte after $n$ traces, ties counted against the correct
+key. Over $A$ random orderings of the attack traces, the guessing entropy is
+$\mathrm{GE}_i(n)=\frac1A\sum_a r_i^{(a)}(n)$~\cite{SMY09}. We report, for the full key,
+\begin{itemize}
+  \item GE$<1$ and GE$<0.5$: the smallest $n$ with $\mathrm{GE}_i(n)$ below the threshold for every
+    byte $i$ ($A=500$, as in~\cite{MS23}, whose ``about 60 traces'' is read off such curves). Ranks are
+    evaluated every 5 traces, so all GE figures are multiples of 5;
+  \item GE$=0$: the smallest $n$ at which every one of the $A$ attacks ranks every byte first;
+  \item MTD: for each attack, the first $n$ at which the worst byte reaches rank 0; averaged over
+    the $A$ attacks;
+  \item $z$: after 5,000 traces, the true key's score minus the mean of the 256 scores, divided by
+    their standard deviation (median over bytes).
+\end{itemize}
+Section~\ref{sec:pitfalls} shows why the choice matters.

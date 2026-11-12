@@ -1,0 +1,29 @@
+\section{Why It Works: the Masked S-box Head Is a Carrier}
+\label{sec:carrier}
+
+\subsection{Top-1 accuracy is the wrong measure}
+In every working model the $C$ heads are barely above chance (residual networks 1.40--1.53\%, GPAM
+0.93--1.00\%, chance 0.39\%), yet replacing them by a uniform distribution makes all 16 key bytes flat,
+while replacing them by the true labels lifts every working model to a median $z$ of +15.7 to +15.9 and
+rank 0 on every byte after 10 traces (one ordering). The key information reaches the decoder
+only through $C$; $\alpha$, $\beta$ and $\pi$ decide how much of it survives the marginalisation of
+Eq.~\eqref{eq:decode}. Even the mean log-likelihood gain of $C$ on its own label is not a reliable
+proxy: the overfitted 137.4M checkpoint has a negative gain ($-0.48$ nats) and still recovers the
+key. \todo{a key-discrimination measure, e.g.\ per-trace log-likelihood ratio of the true key after
+mask marginalisation, plotted against $z$ for all models}
+
+\subsection{A shared bottleneck extinguishes the carrier}
+Variant A (shared 512-d bottleneck) and variant B (unshared heads) have the same trunk and nearly the
+same size (15.09M vs.\ 15.65M). At
+50k profiling traces B recovers the key and A recovers no byte (median $z=-0.29$). Oracle swaps
+locate the failure: with A's own $\alpha$, $\beta$, $\pi$ and the true $C$, the attack reaches
+$z=+15.74$; with true $\alpha$, $\beta$, $\pi$ and A's own $C$, it stays at $+0.04$. The trunk and
+the high-SNR heads work; the low-SNR $C$ heads lose the shared subspace.
+\todo{SNR figures per target; GPAM-paper-LR and TimesNet show the same pattern (high-SNR heads
+learned, $C$ at chance); GPAM at LR $10^{-3}$ shows a shared representation can carry $C$ when
+trained long enough -- phrase as an empirical finding, not a principle}
+
+\subsection{Loss weighting}
+\todo{gradient-budget audit ($C$ heads: 52.6\% of the loss, 38.3\% of trunk gradient) and the
+$w_C$ sweep \{0, 0.25, 0.5, 1\}; $w_C=0$ removes the carrier and the attack (0/16) although $\beta$
+and $\pi$ improve. Report as an ablation with seeds and intervals.}

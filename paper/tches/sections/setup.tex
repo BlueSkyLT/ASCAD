@@ -1,0 +1,32 @@
+\section{Experimental Setup}
+\label{sec:setup}
+
+\paragraph{Data.} Profiling uses the first 400,000 profiling traces of the extracted set, as
+in~\cite{MS23}; four all-zero placeholder traces (indices 99,999, 199,999, 299,999, 399,999) are
+removed, and 5\% are held out for checkpoint selection. All attacks use the first 5,000 attack
+traces. Labels are $\alpha$, $\beta$, the 16 values $C_j$ of Eq.~\eqref{eq:masked} indexed by slot,
+and the 16 permutation indices.
+
+\paragraph{Training.} Unless stated otherwise all residual networks share one recipe: the training
+set's mean trace is subtracted from every trace, RAdam with learning rate $10^{-4}$, batch size 64,
+15 epochs, mixed precision, and the checkpoint with the lowest validation loss (``best''); we also
+evaluate the final epoch (``last''). Two optional losses are used by CompactMultiResNet: the $C$
+cross-entropy terms are weighted by $w_C=0.5$, and a decoder loss $\Ldec$ adds the negative
+log-likelihood of the true unmasked $S_i=\Sbox[p_i\oplus k_i]$ under the marginalisation of
+Eq.~\eqref{eq:decode}, computed exactly with a Walsh--Hadamard transform. Section~\ref{sec:results}
+separates their effect from the architecture's. MultiResNetSCA-1 and CompactMultiResNet (with both losses) are each trained with two seeds; the
+loss ablations with one.
+
+\paragraph{GPAM.} We use the reference implementation (\texttt{scaaml}) with the 34 heads of the
+paper and its Table~1 settings for ASCADv2 (batch 64, 1,000 steps per epoch, 150 epochs, merge
+filters 0/0, target learning rate $5\cdot10^{-5}$ reached by warm-up and followed by cosine
+decay~\cite{GPAM}), changing only the input length (15,000 instead of $10^6$) and therefore the patch
+size (125 samples, i.e.\ 120 tokens, following the paper's $\sqrt{L}$ rule). The optimizer and the
+warm-up length are not given in~\cite{GPAM}; we use Adafactor and 10 epochs. We also train it with a
+constant learning rate of $10^{-3}$ for 89 epochs, which matches CompactMultiResNet's exposure
+(5.7M samples), with and without the residual networks' mean-trace subtraction.
+
+\paragraph{Controls.} Every decode is accompanied by (i) the same posteriors shuffled across traces
+(no-information null), (ii) the $C$ heads replaced by uniform distributions, and (iii) the $C$ heads
+replaced by the true labels (oracle). Ranks count ties against the correct key, so a flat score
+vector ranks last instead of first.

@@ -1,0 +1,47 @@
+%%%% CompactMultiResNet -- TCHES draft (T-039). Build: see README.md in this directory.
+\documentclass[journal=tches,submission]{iacrtrans}
+
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\GF}{\mathrm{GF}(2^8)}
+\newcommand{\Sbox}{\mathrm{Sbox}}
+\newcommand{\Ldec}{\mathcal{L}_{\mathrm{dec}}}
+
+\author{Anonymous}
+\institute{Anonymous}
+\title[Where Do the Parameters Go?]{Where Do the Parameters Go?\\
+  Compact Multi-Task Networks for the Worst-Case ASCADv2 Attack}
+
+\begin{document}
+\maketitle
+
+\keywords{Side-channel analysis \and Deep learning \and Multi-task learning \and
+  Affine masking \and Shuffling \and ASCADv2}
+
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+
+\input{sections/intro}
+\input{sections/background}
+\input{sections/parameters}
+\input{sections/setup}
+\input{sections/results}
+\input{sections/carrier}
+\input{sections/ladder}
+\input{sections/pitfalls}
+\input{sections/related}
+\input{sections/conclusion}
+
+\bibliographystyle{alpha}
+\bibliography{refs}
+
+\appendix
+\input{sections/appendix}
+
+\end{document}

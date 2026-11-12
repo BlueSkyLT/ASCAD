@@ -1,0 +1,47 @@
+\section{Where the Parameters Go}
+\label{sec:params}
+
+\subsection{MultiResNetSCA-1}
+The network of~\cite{MS23} is a one-dimensional residual network~\cite{ResNet} with a stem
+convolution and nine stacks of residual blocks (kernel size 11, stride 2 from the second stack,
+channels doubling from 16 to a cap of 256). For a 15,000-sample trace the last stack outputs
+$256\times 59$ features; an average pooling of width 4 and a flatten give a 3,584-dimensional
+vector $h$. Each of the 34 targets has its own head
+$\mathrm{Linear}(3584,1024)\to\mathrm{ReLU}\to\mathrm{BN}\to\mathrm{Linear}(1024,K)$ with
+$K\in\{256,16\}$.
+
+\begin{table}[t]
+\centering
+\caption{Parameter budget (15,000-sample input, depth 19).}
+\label{tab:params}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrr}
+\toprule
+ & MultiResNetSCA-1 & Compact (A: shared) & Compact (B: unshared) \\
+\midrule
+Convolutional trunk & 7,525,472 & 7,525,472 & 7,525,472 \\
+Heads (34) & 129,870,592 & 7,569,152 & 8,121,472 \\
+\quad of which first dense layers & 124,815,360 & 4,465,152 & 7,800,960 \\
+\midrule
+Total & 137,396,064 & 15,094,624 & 15,646,944 \\
+\bottomrule
+\end{tabular}}
+
+\smallskip
+{\footnotesize For variant A, ``Heads'' includes the shared $3584\to512$ bottleneck (1,836,544
+parameters); ``first dense layers'' counts the 34 per-head $512\to256$ layers only.}
+\end{table}
+
+Table~\ref{tab:params} shows that 94.5\% of the parameters are in the heads and 90.8\% in their 34
+first dense layers alone, each a $3584\times1024$ matrix. The trunk, which is the only part that
+sees the time axis, is 5.5\% of the model. Because $h$ keeps 14 coarse time positions, each head can
+also index \emph{where} a feature occurs, which is useful for the permutation heads but gives every
+head a large, position-indexed capacity to fit noise.
+
+\subsection{CompactMultiResNet}
+We keep the trunk unchanged and replace every head by
+$\mathrm{Linear}(3584,64)\to\mathrm{ReLU}\to\mathrm{BN}\to\mathrm{Linear}(64,K)$ (variant B,
+15.65M parameters). Variant A instead inserts one \emph{shared} 512-dimensional bottleneck between
+$h$ and 256-wide heads (15.09M). Both are 8.8--9.1$\times$ smaller than MultiResNetSCA-1 and within 4\% of each other in size; they
+differ mainly in whether the 34 targets share a dense representation. Section~\ref{sec:carrier}
+shows that this difference decides whether the attack works.

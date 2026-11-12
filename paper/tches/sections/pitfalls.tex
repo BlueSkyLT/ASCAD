@@ -1,0 +1,17 @@
+\section{Reporting Trace Counts}
+\label{sec:pitfalls}
+
+For CompactMultiResNet (seed 1, best checkpoint) the same posteriors give a median of 35 traces to
+rank 0 on a single ordering of the attack set, a worst-byte MTD of 36 over 500 orderings, 60 traces
+for GE$<1$ and 165 for GE$=0$, a spread of almost $5\times$. Comparisons across papers are only meaningful at a common definition;
+we compare with~\cite{MS23} at GE$<1$ because that is what its figure shows. \todo{OvC's TGE$_0$
+definition~\cite{OvC}: full key or single byte, how many attacks -- the PDF could not be retrieved
+automatically}
+
+Two further precautions apply. Ranks must count ties against the correct key: because the simulated key is $\dot k=0$
+(Section~\ref{sec:background}), the opposite convention, or a stable sort that breaks ties by index, ranks
+a constant score vector first, which once made a model with no information appear
+to recover all 16 bytes in our own experiments. And because the worst-case targets $C_j$ are masked,
+their label distribution is uniform, so the label-prior false positive identified
+by~\cite{ReallyBroken} cannot arise here; the shuffled-posterior null (median $|z|<0.6$ for every
+model) and the uniform-$C$ control confirm it.

@@ -1,0 +1,10 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+The reference worst-case attack on ASCADv2 spends almost all of its parameters on what its heads
+read, not on what its trunk extracts. Removing that excess keeps the attack at the published trace
+count, makes it robust to the choice of checkpoint, and exposes the mechanism: the masked S-box heads
+carry the key at near-chance accuracy, and sharing a dense representation suppresses them. The label
+ladder shows which mask-head losses a decoder loss can replace; it does not remove label information
+from profiling, and learning the masks from $S$ alone is untested.
+\todo{limitations: one dataset; 15k extract only; GPAM not tuned beyond one LR; seeds}

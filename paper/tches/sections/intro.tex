@@ -1,0 +1,47 @@
+\section{Introduction}
+\label{sec:intro}
+
+Deep-learning side-channel analysis (DL-SCA) of protected software AES has converged on a small set
+of public benchmarks. Among them, ASCADv2~\cite{MS23} is the hardest that is still routinely
+attacked: the ANSSI implementation on an STM32 Cortex-M4 combines an affine masking of the S-box
+(a multiplicative mask $\alpha\in\GF^\ast$ and an additive mask $\beta$) with a random shuffling of
+the 16 byte computations. In the \emph{worst-case} (or ``first threat'') setting, where the
+randomness is known on the clone device, Masure and Strullu showed that a multi-task network
+predicting $\alpha$, $\beta$, the 16 masked S-box outputs and the 16 permutation indices recovers the
+full key in about 60 traces~\cite{MS23}. Later work either changed the input
+(GPAM~\cite{GPAM} on raw 1M-sample traces), the training objective (OvC~\cite{OvC}), or moved to the
+harder non-worst-case setting~\cite{Scoop}, where a recent claim of success was shown to be a false
+positive~\cite{ReallyBroken}. The worst-case reference model itself has not been revisited.
+
+This paper revisits it, and asks a simple question: \emph{where do its 137.4M parameters go, and
+which of them matter?}
+
+\paragraph{Contributions.}
+\begin{itemize}
+  \item \textbf{Parameter audit.} 129.87M of the 137.40M parameters (94.5\%) are in 34 dense heads that
+    each read the same 3,584-dimensional flattened trunk output, 124.82M (90.8\%) in their first layers alone
+    (Section~\ref{sec:params}). Slim unshared heads give CompactMultiResNet (15.65M).
+  \item \textbf{Same-pipeline comparison.} With 400k profiling traces, our reproduction of
+    MultiResNetSCA-1 matches the head accuracies of~\cite{MS23} to within two points. Under the
+    paper's own metric, CompactMultiResNet needs 60 traces (two seeds), as many as reported
+    in~\cite{MS23} and fewer than our reproduction (75) (Section~\ref{sec:results}).
+  \item \textbf{Robustness.} The 137.4M model overfits after four epochs; its last checkpoint needs
+    135--160 traces (two seeds). CompactMultiResNet's need 70--75 (60 at the best checkpoint).
+  \item \textbf{A transformer baseline at equal budget.} GPAM~\cite{GPAM} trained on the same 15k
+    input, traces, exposure and preprocessing needs 550 traces (1,145 without the mean-trace
+    subtraction); at its published learning rate it does not learn the masked S-box at all.
+  \item \textbf{Mechanism.} The masked S-box head is a \emph{carrier}, not a classifier: replacing it
+    by a uniform distribution destroys the attack although its top-1 accuracy is 1.5\%; in our experiments
+    a shared dense bottleneck suppressed it (Section~\ref{sec:carrier}).
+  \item \textbf{Label ablation.} A differentiable affine decoder used as a loss replaces the
+    $\beta$ cross-entropy; the $C$, $\alpha$ and $\pi$ labels it is computable from are
+    still used, so this removes a loss, not information. With $\alpha$ and $\beta$ labelled, the same loss
+    trains the $C$ heads without $C$ or $\pi$ labels (two seeds, all 16 bytes, about 30$\times$ more
+    traces), and we derive what it teaches them (Section~\ref{sec:ladder}).
+  \item \textbf{Evaluation.} We define the metrics we report and show that single-ordering,
+    worst-byte and all-attack figures differ by almost $5\times$ for the same model
+    (Section~\ref{sec:pitfalls}).
+\end{itemize}
+
+\todo{one-sentence statement of what is \emph{not} claimed: no new attack-trace record over~\cite{OvC}
+until its TGE$_0$ definition is checked}

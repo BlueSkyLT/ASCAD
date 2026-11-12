@@ -51,15 +51,56 @@ def xor_conv(p, q):
     return fwht(fwht(p) * fwht(q)) / p.shape[-1]
 
 
-def head_probs(outputs, n_slots=16):
-    """Softmax of the 34 heads in float32: alpha (n,256), beta (n,256), C (n,16,256), R (n,16,16)."""
+def head_probs(outputs, n_slots=16, pi_routing="row"):
+    """Softmax of the 34 heads in float32: alpha (n,256), beta (n,256), C (n,16,256), R (n,16,16).
+
+    pi_routing="row": R = per-slot softmax (every run before T-041). "crf": R = exact permutation
+    marginals of the pi logits (T-041 B3), differentiable; also works under torch.no_grad.
+    pi_routing="uniform": R = 1/16 everywhere (RC-pi-U); the pi logits are not read, so the pi heads get no gradient.
+    """
     pa = torch.softmax(outputs["alpha_output"].float(), dim=-1)
     pb = torch.softmax(outputs["beta_output"].float(), dim=-1)
     pc = torch.stack([torch.softmax(outputs[f"sbox_{i}_output"].float(), dim=-1)
                       for i in range(n_slots)], dim=1)
-    R = torch.stack([torch.softmax(outputs[f"permind_{i}_output"].float(), dim=-1)
-                     for i in range(n_slots)], dim=1)
+    if pi_routing == "uniform":
+        return pa, pb, pc, torch.full((pa.shape[0], n_slots, n_slots), 1.0 / n_slots, device=pa.device)
+    Lpi = torch.stack([outputs[f"permind_{i}_output"].float() for i in range(n_slots)], dim=1)
+    if pi_routing == "crf":
+        from MultiResNet.perm_crf import marginals
+        if torch.is_grad_enabled() and Lpi.requires_grad:
+            R = marginals(Lpi, create_graph=True)
+        else:
+            with torch.enable_grad():
+                R = marginals(Lpi.detach().requires_grad_(True), create_graph=False).detach()
+    else:
+        R = torch.softmax(Lpi, dim=-1)
     return pa, pb, pc, R
+
+
+def decoder_joint_nll(pa, pb, pc, S, gf_mul, eps=1e-30, chunk=16):
+    """Per-trace -log of the JOINT likelihood of all 16 S values under one shared (alpha, beta) (uniform routing).
+
+    Model: p(S_1..S_16 | x) = sum_{a=1..255, d} P_alpha'(a) P_beta(d) prod_b Pbar_C(a (x) S_b xor d), with Pbar_C the
+    slot-mean of the 16 C heads (what uniform pi routing gives) and P_alpha' = P_alpha restricted to a != 0 and
+    renormalised (alpha is never 0). Each factor sums to 1 over S_b (a != 0, v -> a (x) v is a bijection), so this is a
+    proper pmf. `decoder_nll` instead sums the 16 per-byte marginals, i.e. treats the bytes as independent although they
+    share one (alpha, beta); the two coincide when P_alpha and P_beta are one-hot. Uniform heads give 16 ln 256.
+    S (n,16) long, pc (n,16,256). Cost: n * 16 * 255 * 256 gathers; `chunk` traces at a time bounds the memory.
+    """
+    pcm = pc.mean(dim=1)                                          # (n, 256)
+    logpc = torch.log(pcm.clamp_min(eps))
+    pa1 = pa[:, 1:] / (1.0 - pa[:, 0:1]).clamp_min(eps)           # (n, 255): a = 1..255
+    logprior = torch.log(pa1.clamp_min(eps))[:, :, None] + torch.log(pb.clamp_min(eps))[:, None, :]   # (n, 255, 256)
+    d = torch.arange(256, device=S.device)
+    out = []
+    for i in range(0, S.shape[0], chunk):
+        Sc = S[i:i + chunk]
+        m = Sc.shape[0]
+        mul = gf_mul[1:][:, Sc].permute(1, 2, 0)                  # (m, byte, a): a (x) S_b for a = 1..255
+        idx = mul[..., None] ^ d                                  # (m, byte, a, d)
+        lp = torch.gather(logpc[i:i + m, None, None, :].expand(m, 16, 255, 256), 3, idx)
+        out.append(-torch.logsumexp((lp.sum(dim=1) + logprior[i:i + m]).flatten(1), dim=1))
+    return torch.cat(out)
 
 
 def decoder_nll(pa, pb, pc, R, S, gf_mul, eps=1e-30):

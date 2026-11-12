@@ -95,6 +95,30 @@ class BranchHead(nn.Module):
         return self.out(x)
 
 
+class StructuredCHead(nn.Module):
+    """T-039: a 256-class head whose logits are restricted to a fixed value structure.
+
+    form "bit": logit(v) = sum_i bit_i(v) * w_i (8 outputs); the softmax is then a product of 8 independent
+    bit probabilities. form "hw": logit(v) = w_{HW(v)} (9 outputs). Same FC + BN body as BranchHead.
+    """
+
+    def __init__(self, in_dim: int, form: str, hidden_dim: int = 1024):
+        super().__init__()
+        v = torch.arange(256)
+        bits = ((v[:, None] >> torch.arange(8)) & 1).float()          # (256, 8)
+        if form == "bit":
+            basis = bits
+        elif form == "hw":
+            basis = torch.eye(9)[bits.sum(1).long()]                     # (256, 9)
+        else:
+            raise ValueError(f"unknown C head form {form!r}")
+        self.register_buffer("basis", basis.t().contiguous())           # (k, 256)
+        self.body = BranchHead(in_dim, basis.shape[1], hidden_dim=hidden_dim)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.body(x) @ self.basis.to(x.dtype)
+
+
 class MultiResNet(nn.Module):
     """Multi-task ResNet for ASCADv2 (STM32F303).
 
@@ -199,6 +223,9 @@ class CompactMultiResNet(nn.Module):
         without_permind: bool = False,
         bottleneck_dim: Optional[int] = 512,
         head_hidden_dim: int = 256,
+        three_head: bool = False,
+        c_head_hidden_dim: Optional[int] = None,
+        c_head_form: str = "full",
     ):
         super().__init__()
         if (depth - 1) % 18 != 0:
@@ -250,9 +277,19 @@ class CompactMultiResNet(nn.Module):
 
         self.alpha = BranchHead(head_in_dim, 256, hidden_dim=head_hidden_dim)
         self.beta = BranchHead(head_in_dim, 256, hidden_dim=head_hidden_dim)
-        self.sbox = nn.ModuleList([BranchHead(head_in_dim, 256, hidden_dim=head_hidden_dim) for _ in range(16)])
+        # T-039 3headResNet: ONE C head (no pi heads). forward() still returns the 34-key dict so every
+        # downstream tool is unchanged: sbox_0..15 are the same logits, permind_* are constant zeros
+        # (softmax = exactly uniform). Only valid with uniform pi routing in the decoder (--uniform-pi).
+        self.three_head = three_head
+        # T-039: the C heads can be wider than the others (c_head_hidden_dim); None keeps head_hidden_dim
+        c_hidden = head_hidden_dim if c_head_hidden_dim is None else c_head_hidden_dim
+        # T-039: c_head_form "bit" / "hw" restricts the C logits to the bit-linear / Hamming-weight form
+        self.c_head_form = c_head_form
+        make_c = ((lambda: BranchHead(head_in_dim, 256, hidden_dim=c_hidden)) if c_head_form == "full"
+                  else (lambda: StructuredCHead(head_in_dim, c_head_form, hidden_dim=c_hidden)))
+        self.sbox = nn.ModuleList([make_c() for _ in range(1 if three_head else 16)])
         self.without_permind = without_permind
-        if not without_permind:
+        if not without_permind and not three_head:
             self.permind = nn.ModuleList([BranchHead(head_in_dim, 16, hidden_dim=head_hidden_dim) for _ in range(16)])
 
     def forward(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
@@ -282,6 +319,13 @@ class CompactMultiResNet(nn.Module):
             "alpha_output": self.alpha(x),
             "beta_output": self.beta(x),
         }
+        if self.three_head:
+            c = self.sbox[0](x)
+            zeros = x.new_zeros(x.shape[0], 16)
+            for i in range(16):
+                outputs[f"sbox_{i}_output"] = c
+                outputs[f"permind_{i}_output"] = zeros
+            return outputs
         for i in range(16):
             outputs[f"sbox_{i}_output"] = self.sbox[i](x)
         if not self.without_permind:
